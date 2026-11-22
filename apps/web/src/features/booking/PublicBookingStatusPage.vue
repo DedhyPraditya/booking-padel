@@ -146,7 +146,7 @@ onMounted(fetchStatus)
     <!-- Action Bar (Disembunyikan saat Cetak PDF) -->
     <div class="flex flex-wrap items-center justify-between gap-3 print:hidden">
       <RouterLink
-        :to="{ name: 'home' }"
+        :to="{ name: 'booking' }"
         class="text-sm font-medium text-terracotta-700 hover:underline"
       >
         ← Kembali ke Halaman Booking

@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import PublicVenueListPage from '@/features/venues/PublicVenueListPage.vue'
+import PublicLandingPage from '@/features/landing/PublicLandingPage.vue'
+import PublicBookingPage from '@/features/booking/PublicBookingPage.vue'
 import PublicVenueDetailPage from '@/features/venues/PublicVenueDetailPage.vue'
 import PublicPoliciesPage from '@/features/venues/PublicPoliciesPage.vue'
 import PublicBookingStatusPage from '@/features/booking/PublicBookingStatusPage.vue'
@@ -19,6 +20,9 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior() {
+    return { top: 0 }
+  },
   routes: [
     {
       path: '/',
@@ -27,7 +31,12 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: PublicVenueListPage,
+          component: PublicLandingPage,
+        },
+        {
+          path: 'booking',
+          name: 'booking',
+          component: PublicBookingPage,
         },
         {
           path: 'venues/:slug',

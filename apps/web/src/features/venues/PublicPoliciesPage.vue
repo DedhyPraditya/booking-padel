@@ -59,7 +59,7 @@ import { RouterLink } from 'vue-router'
 
       <div class="pt-2 border-t border-stone-100 flex items-center justify-between">
         <RouterLink
-          :to="{ name: 'home' }"
+          :to="{ name: 'booking' }"
           class="rounded-xl bg-terracotta-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-terracotta-700"
         >
           ← Kembali ke Jadwal & Booking
