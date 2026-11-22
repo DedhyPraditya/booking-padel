@@ -36,12 +36,6 @@ const navItems = [
           >
             {{ item.label }}
           </RouterLink>
-          <RouterLink
-            :to="{ name: 'booking' }"
-            class="rounded-lg bg-terracotta-600 px-4 py-2 text-xs font-bold text-white hover:bg-terracotta-700 transition-colors"
-          >
-            Booking Sekarang
-          </RouterLink>
         </nav>
 
         <button
