@@ -86,10 +86,7 @@ onMounted(loadReports)
   <section class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-stone-900">Laporan Pendapatan, Utilisasi & Audit Log</h1>
-        <p class="text-sm text-stone-600">
-          Rekonsiliasi transaksi nyata dari database PostgreSQL PADEL MAKASSAR.
-        </p>
+        <h1 class="text-2xl font-bold text-stone-900">Laporan & Audit Log</h1>
       </div>
       <button
         type="button"

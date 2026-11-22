@@ -39,11 +39,7 @@ async function handleLookup(): Promise<void> {
 <template>
   <section class="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-xs space-y-5">
     <div>
-      <h1 class="text-xl font-bold text-stone-900">Cek Status Booking & Upload Bukti Transfer</h1>
-      <p class="mt-1 text-sm text-stone-600">
-        Masukkan Kode Booking (mis. <code class="font-mono">PM-...</code>) dan Nomor WhatsApp/HP
-        yang Anda gunakan saat memesan.
-      </p>
+      <h1 class="text-xl font-bold text-stone-900">Cek Pesanan</h1>
     </div>
 
     <div

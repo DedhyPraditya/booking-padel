@@ -114,9 +114,6 @@ onMounted(loadPromotions)
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-stone-900">Voucher & Promo</h1>
-        <p class="mt-0.5 text-sm text-stone-500">
-          Kelola kode diskon untuk pelanggan PADEL MAKASSAR (persentase maupun potongan nominal).
-        </p>
       </div>
       <div class="flex items-center gap-3">
         <button

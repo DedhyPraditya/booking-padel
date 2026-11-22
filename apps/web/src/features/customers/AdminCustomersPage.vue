@@ -121,9 +121,6 @@ onMounted(loadData)
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-stone-900">Pelanggan & Petugas</h1>
-        <p class="mt-0.5 text-sm text-stone-500">
-          Direktori pelanggan PADEL MAKASSAR beserta riwayat nilai transaksi dan hak akses staff.
-        </p>
       </div>
       <div class="flex items-center gap-2">
         <button

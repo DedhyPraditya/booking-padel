@@ -259,11 +259,7 @@ onMounted(fetchStatus)
         class="rounded-lg border border-stone-200 bg-white p-6 space-y-5"
       >
         <div>
-          <h2 class="text-lg font-bold text-stone-900">Instruksi Pembayaran Transfer Bank</h2>
-          <p class="text-sm text-stone-600">
-            Transfer sesuai total tagihan ke rekening resmi di bawah ini, lalu unggah foto/screenshot
-            bukti transfer.
-          </p>
+          <h2 class="text-lg font-bold text-stone-900">Pembayaran Transfer Bank</h2>
         </div>
 
         <div class="rounded-lg border border-terracotta-200 bg-terracotta-50/60 p-4 space-y-2 text-sm">

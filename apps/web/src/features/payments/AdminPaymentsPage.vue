@@ -124,11 +124,7 @@ onMounted(loadPayments)
   <section class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-stone-900">Verifikasi Pembayaran & Bukti Transfer</h1>
-        <p class="text-sm text-stone-600">
-          Periksa bukti transfer masuk (Bank Mandiri 1520037845860 a.n. NURHASDI NANDAR) dan
-          konfirmasi reservasi pelanggan.
-        </p>
+        <h1 class="text-2xl font-bold text-stone-900">Verifikasi Pembayaran</h1>
       </div>
       <div class="flex items-center gap-3">
         <select

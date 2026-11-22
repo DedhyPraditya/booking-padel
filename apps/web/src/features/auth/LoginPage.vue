@@ -36,10 +36,7 @@ async function handleSubmit(): Promise<void> {
 <template>
   <section class="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-xs space-y-5">
     <div>
-      <h1 class="text-xl font-bold text-stone-900">Masuk ke Sistem</h1>
-      <p class="mt-1 text-sm text-stone-600">
-        Gunakan akun petugas atau pelanggan yang terdaftar.
-      </p>
+      <h1 class="text-xl font-bold text-stone-900">Login Admin</h1>
     </div>
 
     <div

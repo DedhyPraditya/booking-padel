@@ -72,10 +72,7 @@ onMounted(fetchAdminVenues)
   <section class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-stone-900">Manajemen Venue & Kebijakan Operasional</h1>
-        <p class="mt-1 text-sm text-stone-600">
-          Menampilkan venue sesuai cakupan otorisasi akun Anda ({{ auth.user?.email }}).
-        </p>
+        <h1 class="text-2xl font-bold text-stone-900">Pengaturan Venue & Rekening</h1>
       </div>
       <button
         type="button"

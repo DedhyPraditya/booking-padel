@@ -109,14 +109,11 @@ onMounted(loadOverview)
       <div class="space-y-1">
         <div class="inline-flex items-center gap-2 rounded-full bg-terracotta-50 px-3 py-1 text-xs font-semibold text-terracotta-700">
           <span class="h-2 w-2 rounded-full bg-terracotta-600"></span>
-          <span>PADEL MAKASSAR • Hertasning</span>
+          <span>PADEL MAKASSAR</span>
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-stone-900">
-          Dashboard Operasional & Reservasi
+          Ringkasan Dashboard
         </h1>
-        <p class="text-sm text-stone-500">
-          Rekonsiliasi real-time jadwal Lapangan 1 & Lapangan 2 serta verifikasi transfer Bank Mandiri.
-        </p>
       </div>
 
       <div class="flex items-center gap-3">
@@ -226,10 +223,7 @@ onMounted(loadOverview)
               <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600">
                 <AppIcon name="court" class="w-4 h-4" />
               </span>
-              <div>
-                <h2 class="text-base font-bold text-stone-900">Performa & Utilisasi Lapangan</h2>
-                <p class="text-xs text-stone-500">Perbandingan jam bermain & pendapatan per court</p>
-              </div>
+              <h2 class="text-base font-bold text-stone-900">Utilisasi Lapangan</h2>
             </div>
             <RouterLink
               :to="{ name: 'admin-reports' }"

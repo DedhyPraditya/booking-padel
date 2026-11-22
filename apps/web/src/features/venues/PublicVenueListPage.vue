@@ -368,9 +368,6 @@ onBeforeUnmount(() => {
         <div class="flex flex-wrap items-end justify-between gap-4 border-b border-stone-100 pb-4">
           <div>
             <h2 class="text-xl font-bold text-stone-900">Pilih Jadwal & Lapangan</h2>
-            <p class="text-sm text-stone-600">
-              Klik satu atau beberapa slot jam (bisa lintas Lapangan 1 & Lapangan 2 untuk grup/turnamen).
-            </p>
           </div>
 
           <div class="flex flex-wrap items-end gap-3">

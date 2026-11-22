@@ -208,9 +208,6 @@ onMounted(loadAll)
           <h1 class="text-2xl font-bold tracking-tight text-stone-900">
             Lapangan, Jam & Tarif
           </h1>
-          <p class="mt-0.5 text-sm text-stone-500">
-            {{ venue.name }} • Zona Waktu {{ venue.timezone }}
-          </p>
         </div>
       </div>
 

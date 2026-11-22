@@ -226,9 +226,6 @@ onMounted(loadData)
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-stone-900">Booking & Check-In</h1>
-        <p class="mt-0.5 text-sm text-stone-500">
-          Daftar reservasi lapangan, check-in kedatangan, dan pembuatan booking manual.
-        </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <select
