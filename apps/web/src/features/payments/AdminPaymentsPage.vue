@@ -79,6 +79,17 @@ function closePreview(): void {
   previewPaymentCode.value = null
 }
 
+function buildCustomerWhatsappVoucherUrl(payment: Payment): string {
+  const b = payment.booking
+  if (!b || !b.customer_phone) return '#'
+  const raw = b.customer_phone.replace(/[^0-9]/g, '')
+  const phone = raw.startsWith('0') ? `62${raw.slice(1)}` : raw
+  const courts = b.items?.map((i) => `${i.court_name_snapshot} (${i.duration_minutes}m)`).join(', ') || 'Lapangan'
+  const lookupUrl = `${window.location.origin}/booking-lookup`
+  const msg = `Halo *${b.customer_name}*,\n\nPembayaran Anda di *PADEL MAKASSAR* telah *TERVERIFIKASI (LUNAS)*.\n\n*E-VOUCHER RESMI:*\n• Kode Booking: *${b.booking_code}*\n• Lapangan: ${courts}\n• Jadwal: ${formatWita(b.start_at)} WITA\n• Total Lunas: ${formatIdr(payment.amount)}\n\nAnda dapat melihat & mengunduh E-Voucher PDF (QR Check-In) kapan saja di:\n${lookupUrl}\n(Masukkan Kode Booking *${b.booking_code}* dan No. WA Anda).\n\nSampai jumpa di lapangan!`
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+}
+
 async function verifyPayment(payment: Payment, decision: 'approve' | 'reject'): Promise<void> {
   errorMessage.value = null
   successMessage.value = null
@@ -295,6 +306,17 @@ onMounted(loadPayments)
             >
               Tolak Bukti
             </button>
+          </div>
+
+          <div v-else-if="p.status === 'paid' && p.booking?.customer_phone">
+            <a
+              :href="buildCustomerWhatsappVoucherUrl(p)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+            >
+              Kirim E-Voucher ke WA Pelanggan ↗
+            </a>
           </div>
         </div>
       </article>
