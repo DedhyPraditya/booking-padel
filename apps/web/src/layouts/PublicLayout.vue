@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
-const router = useRouter()
-
-async function handleLogout(): Promise<void> {
-  await auth.logout()
-  await router.push({ name: 'home' })
-}
+import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
@@ -45,29 +36,6 @@ async function handleLogout(): Promise<void> {
             active-class="text-terracotta-600 font-semibold"
           >
             Aturan & Kebijakan
-          </RouterLink>
-
-          <template v-if="auth.isAuthenticated">
-            <RouterLink
-              :to="{ name: 'admin-overview' }"
-              class="rounded-lg bg-terracotta-50 px-3.5 py-1.5 text-terracotta-700 font-semibold hover:bg-terracotta-100 transition-colors"
-            >
-              Dashboard Admin
-            </RouterLink>
-            <button
-              type="button"
-              class="text-xs text-stone-500 hover:text-stone-900"
-              @click="handleLogout"
-            >
-              Keluar
-            </button>
-          </template>
-          <RouterLink
-            v-else
-            :to="{ name: 'login' }"
-            class="rounded-lg bg-terracotta-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-terracotta-700 transition-colors"
-          >
-            Login Admin
           </RouterLink>
         </nav>
       </div>
