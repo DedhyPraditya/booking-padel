@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import type { Booking, Court, Venue } from '@/types/api'
 import { ApiError, apiRequest } from '@/services/apiClient'
 import { useAuthStore } from '@/stores/auth'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const auth = useAuthStore()
 const bookings = ref<Booking[]>([])
@@ -12,7 +13,13 @@ const courts = ref<Court[]>([])
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+
+// Filters
+const searchQuery = ref('')
 const statusFilter = ref('')
+const courtFilter = ref('')
+const dateFilter = ref('')
+
 const showManualModal = ref(false)
 const creatingManual = ref(false)
 const rescheduleTarget = ref<Booking | null>(null)
@@ -28,6 +35,32 @@ const rescheduleForm = ref({
 const canCreateBooking = computed(() => auth.hasPermission('booking.create'))
 const canUpdateBooking = computed(() => auth.hasPermission('booking.update'))
 const canCancelBooking = computed(() => auth.hasPermission('booking.cancel'))
+
+const hasActiveFilters = computed(
+  () =>
+    searchQuery.value.trim() !== '' ||
+    statusFilter.value !== '' ||
+    courtFilter.value !== '' ||
+    dateFilter.value !== '',
+)
+
+// Instant client-side refinement on top of server query for zero-latency typing
+const filteredBookings = computed(() => {
+  const raw = searchQuery.value.trim().toLowerCase()
+  const codeOrTerm = raw.includes('|') ? (raw.split('|')[1] ?? raw) : raw
+
+  return bookings.value.filter((b) => {
+    if (statusFilter.value && b.status !== statusFilter.value) return false
+    if (courtFilter.value && !b.items?.some((i) => i.court_id === courtFilter.value)) return false
+    if (!codeOrTerm) return true
+
+    return (
+      b.booking_code.toLowerCase().includes(codeOrTerm) ||
+      b.customer_name.toLowerCase().includes(codeOrTerm) ||
+      (b.customer_phone && b.customer_phone.toLowerCase().includes(codeOrTerm))
+    )
+  })
+})
 
 const manualForm = ref({
   venue_id: '',
@@ -70,13 +103,32 @@ function statusBadgeClass(status: string): string {
   }
 }
 
+function setTodayFilter(): void {
+  dateFilter.value = new Date().toISOString().slice(0, 10)
+  loadData()
+}
+
+function resetFilters(): void {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  courtFilter.value = ''
+  dateFilter.value = ''
+  loadData()
+}
+
 async function loadData(): Promise<void> {
   loading.value = true
   errorMessage.value = null
   try {
-    const query = statusFilter.value ? `?status=${encodeURIComponent(statusFilter.value)}` : ''
+    const params = new URLSearchParams()
+    if (statusFilter.value) params.set('status', statusFilter.value)
+    if (courtFilter.value) params.set('court_id', courtFilter.value)
+    if (dateFilter.value) params.set('date', dateFilter.value)
+    if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim())
+
+    const qs = params.toString() ? `?${params.toString()}` : ''
     const [bookingsRes, venuesRes, courtsRes] = await Promise.all([
-      apiRequest<Booking[]>(`/admin/bookings${query}`),
+      apiRequest<Booking[]>(`/admin/bookings${qs}`),
       apiRequest<Venue[]>('/admin/venues'),
       apiRequest<Court[]>('/admin/courts'),
     ])
@@ -222,40 +274,117 @@ onMounted(loadData)
 </script>
 
 <template>
-  <section class="space-y-6">
+  <section class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-stone-900">Booking & Check-In</h1>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <select
-          v-model="statusFilter"
-          class="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700"
-          @change="loadData"
-        >
-          <option value="">Semua Status</option>
-          <option value="pending_payment">Pending Payment</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="checked_in">Checked In</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="expired">Expired</option>
-        </select>
+      <div class="flex items-center gap-2.5">
         <button
           type="button"
-          class="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
           @click="loadData"
         >
-          Segarkan
+          <AppIcon name="refresh" class="w-3.5 h-3.5" />
+          <span>Segarkan</span>
         </button>
         <button
           v-if="canCreateBooking"
           type="button"
-          class="rounded-lg bg-terracotta-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-terracotta-700"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-terracotta-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-terracotta-700"
           @click="showManualModal = true"
         >
-          + Booking Manual
+          <AppIcon name="plus" class="w-3.5 h-3.5" />
+          <span>Booking Manual</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Filter Bar Pencarian Kode, Pelanggan, Lapangan, Tanggal, & Status -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-2xs space-y-3">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+        <!-- Input Cari Kode / Nama / WA -->
+        <div class="lg:col-span-5 relative">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari Kode Booking (PM-...), Nama, atau No. WA..."
+            class="w-full rounded-xl border border-stone-200 bg-[#FAF8F6] pl-9 pr-3 py-2 text-xs font-medium text-stone-900 placeholder:text-stone-400 focus:border-terracotta-600 focus:bg-white focus:outline-none"
+            @keyup.enter="loadData"
+          />
+          <AppIcon name="search" class="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+        </div>
+
+        <!-- Filter Lapangan -->
+        <div class="lg:col-span-2">
+          <select
+            v-model="courtFilter"
+            class="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 focus:border-terracotta-600 focus:outline-none"
+            @change="loadData"
+          >
+            <option value="">Semua Lapangan</option>
+            <option v-for="c in courts" :key="c.id" :value="c.id">
+              {{ c.name }} ({{ c.code }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Filter Status -->
+        <div class="lg:col-span-2">
+          <select
+            v-model="statusFilter"
+            class="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 focus:border-terracotta-600 focus:outline-none"
+            @change="loadData"
+          >
+            <option value="">Semua Status</option>
+            <option value="confirmed">Confirmed (Siap Check-In)</option>
+            <option value="checked_in">Checked In (Sedang Main)</option>
+            <option value="pending_payment">Pending Payment</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+
+        <!-- Filter Tanggal -->
+        <div class="lg:col-span-3 flex items-center gap-2">
+          <input
+            v-model="dateFilter"
+            type="date"
+            class="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 focus:border-terracotta-600 focus:outline-none"
+            @change="loadData"
+          />
+          <button
+            type="button"
+            class="rounded-xl border border-terracotta-200 bg-terracotta-50 px-2.5 py-2 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-100"
+            @click="setTodayFilter"
+          >
+            Hari Ini
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-stone-500">
+        <span>
+          Menampilkan <strong>{{ filteredBookings.length }}</strong> reservasi
+        </span>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="hasActiveFilters"
+            type="button"
+            class="font-semibold text-terracotta-700 hover:underline"
+            @click="resetFilters"
+          >
+            Reset Semua Filter
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-stone-900 px-3 py-1 text-xs font-semibold text-white hover:bg-stone-800"
+            @click="loadData"
+          >
+            Cari di Database
+          </button>
+        </div>
       </div>
     </div>
 
@@ -267,7 +396,7 @@ onMounted(loadData)
     </div>
 
     <div
-      v-if="errorMessage && !showManualModal"
+      v-if="errorMessage && !showManualModal && !rescheduleTarget"
       class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
     >
       {{ errorMessage }}
@@ -282,13 +411,21 @@ onMounted(loadData)
     </div>
 
     <div
-      v-else-if="bookings.length === 0"
-      class="rounded-xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500"
+      v-else-if="filteredBookings.length === 0"
+      class="rounded-xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500 space-y-2"
     >
-      Belum ada data booking untuk filter ini.
+      <p>Tidak ditemukan data booking yang cocok dengan filter pencarian.</p>
+      <button
+        v-if="hasActiveFilters"
+        type="button"
+        class="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-terracotta-700 hover:bg-stone-50"
+        @click="resetFilters"
+      >
+        Tampilkan Semua Booking
+      </button>
     </div>
 
-    <div v-else class="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+    <div v-else class="overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-2xs">
       <table class="min-w-full divide-y divide-stone-100 text-sm">
         <thead class="bg-[#FAF8F6] text-left text-xs font-semibold text-stone-500">
           <tr>
@@ -302,7 +439,7 @@ onMounted(loadData)
           </tr>
         </thead>
         <tbody class="divide-y divide-stone-100">
-          <tr v-for="b in bookings" :key="b.id" class="hover:bg-stone-50/70">
+          <tr v-for="b in filteredBookings" :key="b.id" class="hover:bg-stone-50/70">
             <td class="px-5 py-3.5 font-mono text-xs font-bold text-stone-900">
               {{ b.booking_code }}
             </td>

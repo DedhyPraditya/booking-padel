@@ -39,6 +39,26 @@ class AdminBookingController extends Controller
             $query->where('status', (string) $request->query('status'));
         }
 
+        if ($request->filled('court_id')) {
+            $courtId = (string) $request->query('court_id');
+            $query->whereHas('items', fn ($q) => $q->where('court_id', $courtId));
+        }
+
+        if ($request->filled('search')) {
+            $rawSearch = trim((string) $request->query('search'));
+            // Support direct QR scan payload format: PADELMAKASSAR|PM-XXXXXX|...
+            if (str_contains($rawSearch, '|')) {
+                $parts = explode('|', $rawSearch);
+                $rawSearch = $parts[1] ?? $rawSearch;
+            }
+            $term = '%'.strtolower($rawSearch).'%';
+            $query->where(function ($q) use ($term) {
+                $q->whereRaw('LOWER(booking_code) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(customer_name) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(customer_phone) LIKE ?', [$term]);
+            });
+        }
+
         if ($request->filled('date')) {
             $date = (string) $request->query('date');
             $query->whereDate('start_at', $date);
