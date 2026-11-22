@@ -1,6 +1,8 @@
 import type { ApiEnvelope, ApiValidationError } from '@/types/api'
 
 const TOKEN_STORAGE_KEY = 'padel_auth_token'
+const TOKEN_EXPIRES_KEY = 'padel_auth_expires_at'
+const TOKEN_DAY_KEY = 'padel_auth_wita_day'
 
 export class ApiError extends Error {
   status: number
@@ -14,15 +16,49 @@ export class ApiError extends Error {
   }
 }
 
-export function getStoredToken(): string | null {
-  return sessionStorage.getItem(TOKEN_STORAGE_KEY)
+function currentWitaDay(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Makassar',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
 }
 
-export function setStoredToken(token: string | null): void {
+export function getStoredToken(): string | null {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
+  if (!token) return null
+
+  const storedDay = localStorage.getItem(TOKEN_DAY_KEY)
+  const storedExpiresAt = localStorage.getItem(TOKEN_EXPIRES_KEY)
+
+  // Force re-login if the calendar day in WITA has changed or if expires_at has passed
+  if (storedDay && storedDay !== currentWitaDay()) {
+    setStoredToken(null)
+    return null
+  }
+
+  if (storedExpiresAt && new Date(storedExpiresAt).getTime() <= Date.now()) {
+    setStoredToken(null)
+    return null
+  }
+
+  return token
+}
+
+export function setStoredToken(token: string | null, expiresAt?: string | null): void {
   if (token) {
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, token)
+    localStorage.setItem(TOKEN_STORAGE_KEY, token)
+    localStorage.setItem(TOKEN_DAY_KEY, currentWitaDay())
+    if (expiresAt) {
+      localStorage.setItem(TOKEN_EXPIRES_KEY, expiresAt)
+    } else {
+      localStorage.removeItem(TOKEN_EXPIRES_KEY)
+    }
   } else {
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(TOKEN_DAY_KEY)
+    localStorage.removeItem(TOKEN_EXPIRES_KEY)
   }
 }
 
@@ -48,6 +84,9 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setStoredToken(null)
+    }
     let payload: ApiValidationError | null = null
     try {
       payload = (await response.json()) as ApiValidationError

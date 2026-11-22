@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -33,11 +34,25 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken($validated['device_name'] ?? 'web-client')->plainTextToken;
+        // Prune expired tokens for this user
+        $user->tokens()->where('expires_at', '<=', now())->delete();
+
+        // Expire at the end of the current WITA day (23:59:59 Asia/Makassar), max 24 hours
+        $tz = config('app.venue_timezone', env('DEFAULT_VENUE_TIMEZONE', 'Asia/Makassar'));
+        $endOfDayWita = CarbonImmutable::now($tz)->endOfDay();
+        $max24Hours = CarbonImmutable::now($tz)->addHours(24);
+        $expiresAt = $endOfDayWita->lessThanOrEqualTo($max24Hours) ? $endOfDayWita : $max24Hours;
+
+        $newAccessToken = $user->createToken(
+            name: $validated['device_name'] ?? 'web-client',
+            abilities: ['*'],
+            expiresAt: $expiresAt->utc(),
+        );
 
         return response()->json([
             'data' => [
-                'token' => $token,
+                'token' => $newAccessToken->plainTextToken,
+                'expires_at' => $expiresAt->toIso8601String(),
                 'user' => $this->formatUser($user),
             ],
             'meta' => (object) [],

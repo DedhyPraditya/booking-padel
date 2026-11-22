@@ -94,11 +94,13 @@ class Phase1FoundationTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'token',
+                    'expires_at',
                     'user' => ['id', 'name', 'email', 'roles', 'permissions', 'accessible_venue_ids'],
                 ],
             ]);
 
         $token = $loginResponse->json('data.token');
+        $this->assertNotEmpty($loginResponse->json('data.expires_at'));
 
         $meResponse = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/v1/me');

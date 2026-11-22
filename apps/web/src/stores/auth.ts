@@ -8,21 +8,22 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const initialized = ref(false)
 
-  const isAuthenticated = computed(() => user.value !== null)
+  const isAuthenticated = computed(() => user.value !== null && getStoredToken() !== null)
 
   function hasPermission(permission: string): boolean {
-    if (!user.value) return false
+    if (!user.value || !getStoredToken()) return false
     if (user.value.roles.some((r) => r.role === 'super_admin')) return true
     return user.value.permissions.includes(permission)
   }
 
   async function hydrate(): Promise<void> {
-    if (initialized.value) return
     const token = getStoredToken()
     if (!token) {
+      user.value = null
       initialized.value = true
       return
     }
+    if (initialized.value && user.value) return
     loading.value = true
     try {
       const response = await apiRequest<AuthenticatedUser>('/me')
@@ -39,11 +40,15 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string): Promise<void> {
     loading.value = true
     try {
-      const response = await apiRequest<{ token: string; user: AuthenticatedUser }>('/auth/login', {
+      const response = await apiRequest<{
+        token: string
+        expires_at?: string
+        user: AuthenticatedUser
+      }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, device_name: 'web-browser' }),
       })
-      setStoredToken(response.data.token)
+      setStoredToken(response.data.token, response.data.expires_at ?? null)
       user.value = response.data.user
       initialized.value = true
     } finally {

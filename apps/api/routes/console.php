@@ -10,3 +10,4 @@ Artisan::command('bookings:expire-holds', function (BookingService $bookingServi
 })->purpose('Expire overdue booking holds and release court reservations');
 
 Schedule::command('bookings:expire-holds')->everyMinute()->withoutOverlapping();
+Schedule::command('sanctum:prune-expired --hours=0')->dailyAt('00:05')->timezone('Asia/Makassar');
