@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import type {
   AvailabilitySlot,
   Booking,
@@ -10,6 +10,7 @@ import type {
   Venue,
 } from '@/types/api'
 import { ApiError, apiRequest } from '@/services/apiClient'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 interface SelectedSlotItem {
   key: string
@@ -52,6 +53,15 @@ const bookingError = ref<string | null>(null)
 
 const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
+const facilities = [
+  '2 Court Semi-Indoor (Atap Pelindung Cuaca)',
+  'Kaca Tempered Panoramic & Rumput Sintetis Standar Turnamen',
+  'Lampu LED High-Bay Anti-Silau',
+  'Area Tunggu Pemain & Tribun Penonton',
+  'Penyewaan Raket & Bola Padel',
+  'Toilet, Ruang Ganti, Musholla & Parkir Luas',
+]
+
 const estimatedTotal = computed(() =>
   selectedItems.value.reduce((sum, item) => sum + (item.price || 0), 0),
 )
@@ -59,6 +69,12 @@ const estimatedTotal = computed(() =>
 const totalSelectedHours = computed(() => {
   const totalMinutes = selectedItems.value.length * selectedDuration.value
   return (totalMinutes / 60).toFixed(totalMinutes % 60 === 0 ? 0 : 1)
+})
+
+const startingPrice = computed(() => {
+  const rules = venue.value?.pricing_rules || []
+  if (rules.length === 0) return 250000
+  return Math.min(...rules.map((r) => Number(r.price_per_hour)))
 })
 
 function formatIdr(amount: string | number | null): string {
@@ -79,13 +95,17 @@ function formatCourtType(type: string): string {
 function slotStatusText(status: AvailabilitySlot['status']): string {
   const map: Record<AvailabilitySlot['status'], string> = {
     available: 'Tersedia',
-    held: 'Ditahan (Checkout)',
+    held: 'Ditahan',
     booked: 'Terpesan',
     blocked: 'Diblokir',
     maintenance: 'Maintenance',
     unpriced: 'Tutup',
   }
   return map[status] || status
+}
+
+function scrollToSection(id: string): void {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
 function makeSlotKey(courtId: string, startAt: string): string {
@@ -119,7 +139,6 @@ function toggleSlot(court: CourtAvailability, slot: AvailabilitySlot): void {
     return
   }
 
-  // Prevent selecting overlapping intervals on the same court when slot interval < duration
   if (overlapsWithExistingOnSameCourt(court.court_id, slot.start_at, slot.end_at)) {
     bookingError.value =
       'Slot yang dipilih beririsan dengan jam lain yang sudah Anda pilih di lapangan yang sama.'
@@ -304,76 +323,241 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="space-y-6 pb-24">
+  <div class="space-y-10 pb-24">
     <div
       v-if="loading"
-      class="rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-600"
+      class="rounded-2xl border border-stone-200 bg-white p-12 text-center text-sm text-stone-500"
     >
-      Memuat informasi PADEL MAKASSAR...
+      Memuat PADEL MAKASSAR...
     </div>
 
     <div
       v-else-if="errorMessage"
-      class="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-800 space-y-3"
+      class="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 space-y-3"
     >
       <p class="font-semibold">Gagal memuat data venue</p>
       <p>{{ errorMessage }}</p>
       <button
         type="button"
-        class="rounded-md bg-red-700 px-3 py-1.5 text-white hover:bg-red-800"
+        class="rounded-lg bg-red-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-red-800"
         @click="loadPrimaryVenue"
       >
         Coba Lagi
       </button>
     </div>
 
-    <div
-      v-else-if="!venue"
-      class="rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-600"
-    >
-      Data venue belum tersedia.
-    </div>
+    <template v-else-if="venue">
+      <!-- 1. HERO LANDING SECTION -->
+      <section
+        class="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 sm:p-10 shadow-2xs"
+      >
+        <div class="grid gap-8 lg:grid-cols-12 lg:items-center">
+          <div class="lg:col-span-7 space-y-5">
+            <div class="inline-flex flex-wrap items-center gap-2">
+              <span
+                class="rounded-full bg-terracotta-50 border border-terracotta-200 px-3 py-1 text-xs font-bold text-terracotta-700"
+              >
+                {{ venue.city }} • Semi-Indoor Court
+              </span>
+              <span
+                class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700"
+              >
+                07:00 – 23:00 WITA
+              </span>
+            </div>
 
-    <template v-else>
-      <!-- Hero Venue Info -->
-      <div class="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-        <div class="flex flex-wrap items-start justify-between gap-4 border-b border-stone-100 pb-4">
-          <div>
-            <span class="rounded-full bg-terracotta-50 px-2.5 py-0.5 text-xs font-semibold text-terracotta-800">
-              {{ venue.city }} • Zona Waktu {{ venue.timezone }} (WITA)
-            </span>
-            <h1 class="mt-2 text-2xl font-bold text-stone-900">{{ venue.name }}</h1>
-            <p class="mt-1 text-sm text-stone-600">{{ venue.address }}</p>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900">
+              {{ venue.name }}
+            </h1>
+
+            <p class="text-sm sm:text-base text-stone-600 leading-relaxed">
+              {{ venue.address }}
+            </p>
+
+            <div class="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="button"
+                class="rounded-xl bg-terracotta-600 px-6 py-3 text-sm font-bold text-white shadow-xs hover:bg-terracotta-700 transition-colors"
+                @click="scrollToSection('booking')"
+              >
+                Pilih Jadwal & Booking Sekarang
+              </button>
+              <RouterLink
+                :to="{ name: 'booking-lookup' }"
+                class="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 transition-colors"
+              >
+                Cek Pesanan / E-Voucher
+              </RouterLink>
+            </div>
           </div>
-          <div class="text-sm text-right">
-            <p class="text-xs text-stone-500">WhatsApp / Kontak</p>
-            <p class="font-semibold text-stone-900">{{ venue.phone }}</p>
+
+          <!-- Highlight Ringkas Kanan -->
+          <div class="lg:col-span-5 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl border border-stone-200/80 bg-[#FAF8F6] p-4 space-y-1">
+              <span class="text-xs font-medium text-stone-500">Mulai Dari</span>
+              <p class="text-xl font-extrabold text-terracotta-700">
+                {{ formatIdr(startingPrice) }}
+              </p>
+              <span class="text-[11px] text-stone-500">per jam (07:00 – 16:00)</span>
+            </div>
+
+            <div class="rounded-2xl border border-stone-200/80 bg-[#FAF8F6] p-4 space-y-1">
+              <span class="text-xs font-medium text-stone-500">Kapasitas</span>
+              <p class="text-xl font-extrabold text-stone-900">
+                {{ venue.courts?.length || 2 }} Lapangan
+              </p>
+              <span class="text-[11px] text-stone-500">Lapangan 1 (001) & 2 (002)</span>
+            </div>
+
+            <div
+              class="col-span-2 rounded-2xl border border-terracotta-200 bg-terracotta-50/70 p-4 flex items-center justify-between gap-3"
+            >
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta-700">
+                  Promo Aktif
+                </span>
+                <p class="text-sm font-bold text-stone-900">
+                  Gunakan Kode <code class="font-mono text-terracotta-700">OPENING10</code> (Diskon
+                  10%)
+                </p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-lg bg-terracotta-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-terracotta-700"
+                @click="
+                  () => {
+                    customerForm.promotion_code = 'OPENING10'
+                    scrollToSection('booking')
+                  }
+                "
+              >
+                Pakai Kode
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. SPESIFIKASI 2 LAPANGAN & FASILITAS VENUE (#courts) -->
+      <section id="courts" class="grid gap-6 lg:grid-cols-12">
+        <!-- 2 Kartu Lapangan Real -->
+        <div class="lg:col-span-7 rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600"
+              >
+                <AppIcon name="court" class="w-4 h-4" />
+              </span>
+              <h2 class="text-lg font-bold text-stone-900">Spesifikasi Lapangan</h2>
+            </div>
+            <span class="text-xs font-semibold text-stone-500">
+              {{ venue.courts?.length || 2 }} Court Aktif
+            </span>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <article
+              v-for="court in venue.courts"
+              :key="court.id"
+              class="rounded-2xl border border-stone-200 bg-[#FAF8F6] p-5 flex flex-col justify-between gap-4"
+            >
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span
+                    class="rounded-md bg-terracotta-600 px-2.5 py-0.5 font-mono text-xs font-bold text-white"
+                  >
+                    Kode {{ court.code }}
+                  </span>
+                  <span
+                    class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                    :class="
+                      court.status === 'active'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    "
+                  >
+                    {{ court.status === 'active' ? 'Tersedia' : 'Maintenance' }}
+                  </span>
+                </div>
+
+                <h3 class="text-lg font-bold text-stone-900">{{ court.name }}</h3>
+
+                <ul class="space-y-1 text-xs text-stone-600">
+                  <li>• Konstruksi: <strong>{{ formatCourtType(court.court_type) }}</strong></li>
+                  <li>• Lantai: <strong>Panoramic Synthetic Turf</strong></li>
+                  <li>• Dinding: <strong>Tempered Glass 12mm</strong></li>
+                  <li>• Pencahayaan: <strong>LED Tournament Grade</strong></li>
+                </ul>
+              </div>
+
+              <button
+                type="button"
+                class="w-full rounded-xl border border-terracotta-600 bg-white py-2 text-xs font-bold text-terracotta-700 hover:bg-terracotta-50 transition-colors"
+                @click="scrollToSection('booking')"
+              >
+                Cek Jam {{ court.name }} →
+              </button>
+            </article>
           </div>
         </div>
 
-        <dl class="grid gap-4 sm:grid-cols-3 rounded-lg bg-stone-50 p-4 text-sm">
-          <div>
-            <dt class="text-xs text-stone-500">Mode Pemilihan</dt>
-            <dd class="font-semibold text-stone-900">
-              Bisa pilih 1 jam, beberapa jam, atau 2 lapangan sekaligus (Turnamen)
-            </dd>
-          </div>
-          <div>
-            <dt class="text-xs text-stone-500">Jam Operasional</dt>
-            <dd class="font-semibold text-stone-900">07:00 – 23:00 WITA</dd>
-          </div>
-          <div>
-            <dt class="text-xs text-stone-500">Batas Waktu Pembayaran (Hold)</dt>
-            <dd class="font-semibold text-stone-900">{{ venue.hold_duration_minutes }} menit</dd>
-          </div>
-        </dl>
-      </div>
+        <!-- Fasilitas Venue -->
+        <div class="lg:col-span-5 rounded-2xl border border-stone-200 bg-white p-6 flex flex-col justify-between gap-4">
+          <div class="space-y-4">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600"
+              >
+                <AppIcon name="check" class="w-4 h-4" />
+              </span>
+              <h2 class="text-lg font-bold text-stone-900">Fasilitas Venue</h2>
+            </div>
 
-      <!-- Mesin Ketersediaan & Multi-Slot Booking -->
-      <div class="rounded-lg border border-stone-200 bg-white p-6 space-y-5">
+            <ul class="space-y-2.5 text-sm text-stone-700">
+              <li
+                v-for="item in facilities"
+                :key="item"
+                class="flex items-start gap-2.5 rounded-xl bg-[#FAF8F6] px-3.5 py-2.5 text-xs font-medium text-stone-800"
+              >
+                <span class="text-terracotta-600 font-bold">✓</span>
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-stone-200 bg-[#FAF8F6] p-3.5 flex items-center justify-between text-xs">
+            <span class="text-stone-600">Sewa grup / komunitas / turnamen?</span>
+            <a
+              :href="`https://wa.me/62${venue.phone.replace(/^0/, '')}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-bold text-terracotta-700 hover:underline"
+            >
+              WhatsApp Admin ({{ venue.phone }}) ↗
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. MESIN KETERSEDIAAN & MULTI-SLOT BOOKING (#booking) -->
+      <section
+        id="booking"
+        class="rounded-2xl border border-stone-200 bg-white p-6 shadow-2xs space-y-5 scroll-mt-20"
+      >
         <div class="flex flex-wrap items-end justify-between gap-4 border-b border-stone-100 pb-4">
-          <div>
-            <h2 class="text-xl font-bold text-stone-900">Pilih Jadwal & Lapangan</h2>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-terracotta-600 text-white"
+            >
+              <AppIcon name="calendar" class="w-4 h-4" />
+            </span>
+            <div>
+              <h2 class="text-xl font-bold text-stone-900">Jadwal & Booking Online</h2>
+              <p class="text-xs text-stone-500">
+                Bisa pilih 1 jam, beberapa jam sekaligus, atau 2 lapangan bersamaan
+              </p>
+            </div>
           </div>
 
           <div class="flex flex-wrap items-end gap-3">
@@ -382,7 +566,7 @@ onBeforeUnmount(() => {
               <input
                 v-model="selectedDate"
                 type="date"
-                class="mt-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
+                class="mt-1 rounded-xl border border-stone-300 px-3 py-2 text-xs font-semibold"
                 @change="loadAvailability"
               />
             </div>
@@ -391,7 +575,7 @@ onBeforeUnmount(() => {
               <label class="block text-xs font-medium text-stone-700">Ukuran Blok Slot</label>
               <select
                 v-model.number="selectedDuration"
-                class="mt-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
+                class="mt-1 rounded-xl border border-stone-300 px-3 py-2 text-xs font-semibold"
                 @change="loadAvailability"
               >
                 <option :value="60">Per 1 Jam (60 Menit)</option>
@@ -402,29 +586,30 @@ onBeforeUnmount(() => {
 
             <button
               type="button"
-              class="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100"
               :disabled="availabilityLoading"
               @click="loadAvailability"
             >
-              {{ availabilityLoading ? 'Memuat...' : 'Segarkan Jadwal' }}
+              <AppIcon name="refresh" class="w-3.5 h-3.5" />
+              <span>{{ availabilityLoading ? 'Memuat...' : 'Segarkan' }}</span>
             </button>
           </div>
         </div>
 
         <div
           v-if="bookingError && !isModalOpen"
-          class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
         >
           {{ bookingError }}
         </div>
 
-        <div v-if="availabilityLoading" class="py-8 text-center text-sm text-stone-600">
+        <div v-if="availabilityLoading" class="py-10 text-center text-sm text-stone-500">
           Menghitung slot jadwal yang tersedia...
         </div>
 
         <div
           v-else-if="availability?.is_closed"
-          class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
         >
           {{ availability.closed_reason || 'Venue tutup pada tanggal yang dipilih.' }}
         </div>
@@ -433,18 +618,23 @@ onBeforeUnmount(() => {
           <div
             v-for="court in availability.courts"
             :key="court.court_id"
-            class="rounded-lg border border-stone-200 p-4 space-y-3"
+            class="rounded-2xl border border-stone-200 p-4 sm:p-5 space-y-3.5"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 class="font-bold text-stone-900">
-                  {{ court.court_name }} (Kode: {{ court.court_code }})
-                </h3>
-                <p class="text-xs text-stone-500">Tipe: {{ formatCourtType(court.court_type) }}</p>
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="rounded-md bg-terracotta-600 px-2.5 py-0.5 font-mono text-xs font-bold text-white"
+                >
+                  {{ court.court_code }}
+                </span>
+                <h3 class="font-bold text-stone-900">{{ court.court_name }}</h3>
+                <span class="text-xs text-stone-500">
+                  ({{ formatCourtType(court.court_type) }})
+                </span>
               </div>
               <button
                 type="button"
-                class="rounded-md border border-terracotta-700 px-2.5 py-1 text-xs font-semibold text-terracotta-800 hover:bg-terracotta-50"
+                class="rounded-lg border border-terracotta-600 px-3 py-1 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
                 @click="selectAllAvailableForCourt(court)"
               >
                 + Pilih Semua Jam Tersedia ({{ court.court_name }})
@@ -457,9 +647,9 @@ onBeforeUnmount(() => {
                 :key="slot.start_at"
                 type="button"
                 :disabled="!slot.available"
-                class="rounded-md border p-2 text-left text-xs transition"
+                class="rounded-xl border p-2.5 text-left text-xs transition"
                 :class="{
-                  'border-terracotta-700 bg-terracotta-700 text-white font-semibold ring-2 ring-terracotta-700/30':
+                  'border-terracotta-600 bg-terracotta-600 text-white font-semibold ring-2 ring-terracotta-600/30':
                     isSlotSelected(court.court_id, slot.start_at),
                   'border-stone-200 bg-white hover:border-terracotta-600 text-stone-900':
                     slot.available && !isSlotSelected(court.court_id, slot.start_at),
@@ -471,7 +661,7 @@ onBeforeUnmount(() => {
                 @click="toggleSlot(court, slot)"
               >
                 <div class="flex items-center justify-between">
-                  <span class="font-semibold">{{ slot.start_time }} – {{ slot.end_time }}</span>
+                  <span class="font-bold">{{ slot.start_time }} – {{ slot.end_time }}</span>
                   <span v-if="isSlotSelected(court.court_id, slot.start_at)" class="text-[11px]">
                     ✓
                   </span>
@@ -484,33 +674,141 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Floating Bottom Bar saat ada slot yang dipilih (tanpa perlu scroll) -->
+      <!-- 4. DAFTAR TARIF, JAM OPERASIONAL & LOKASI (#info) -->
+      <section id="info" class="grid gap-6 lg:grid-cols-3">
+        <!-- Tarif Sewa -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+          <div class="flex items-center gap-2.5">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600"
+            >
+              <AppIcon name="tag" class="w-4 h-4" />
+            </span>
+            <h2 class="text-base font-bold text-stone-900">Tarif Sewa Lapangan</h2>
+          </div>
+
+          <ul class="divide-y divide-stone-100 text-sm">
+            <li
+              v-for="rule in venue.pricing_rules"
+              :key="rule.id"
+              class="py-3 flex items-center justify-between gap-3"
+            >
+              <div>
+                <p class="font-semibold text-stone-900 text-xs sm:text-sm">{{ rule.name }}</p>
+                <p class="text-xs text-stone-500">
+                  {{ rule.start_time.slice(0, 5) }} – {{ rule.end_time.slice(0, 5) }} WITA
+                  <span v-if="rule.day_of_week !== null"> • {{ dayNames[rule.day_of_week] }}</span>
+                </p>
+              </div>
+              <span class="shrink-0 font-bold text-terracotta-700 text-xs sm:text-sm">
+                {{ formatIdr(rule.price_per_hour) }} / jam
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Jam Operasional -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+          <div class="flex items-center gap-2.5">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600"
+            >
+              <AppIcon name="clock" class="w-4 h-4" />
+            </span>
+            <h2 class="text-base font-bold text-stone-900">Jam Operasional</h2>
+          </div>
+
+          <ul class="divide-y divide-stone-100 text-sm">
+            <li
+              v-for="item in venue.operating_hours"
+              :key="item.day_of_week"
+              class="py-2 flex items-center justify-between text-xs sm:text-sm"
+            >
+              <span class="font-medium text-stone-700">{{ dayNames[item.day_of_week] }}</span>
+              <span v-if="item.is_closed" class="text-red-700 font-semibold">Tutup</span>
+              <span v-else class="font-semibold text-stone-900">
+                {{ item.open_time.slice(0, 5) }} – {{ item.close_time.slice(0, 5) }} WITA
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Lokasi & Ketentuan -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 flex flex-col justify-between gap-4">
+          <div class="space-y-4">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-600"
+              >
+                <AppIcon name="shield" class="w-4 h-4" />
+              </span>
+              <h2 class="text-base font-bold text-stone-900">Lokasi & Ketentuan</h2>
+            </div>
+
+            <div class="rounded-xl bg-[#FAF8F6] p-3.5 text-xs text-stone-700 space-y-1.5">
+              <p class="font-bold text-stone-900">Alamat Venue:</p>
+              <p>{{ venue.address }}</p>
+            </div>
+
+            <ul class="space-y-2 text-xs text-stone-600">
+              <li>
+                • Batas waktu pembayaran (hold slot):
+                <strong>{{ venue.hold_duration_minutes }} menit</strong>
+              </li>
+              <li>
+                • Batas pengajuan reschedule / batal:
+                <strong>{{ venue.cancellation_cutoff_hours }} jam sebelum jadwal</strong>
+              </li>
+              <li>• Wajib menggunakan sepatu olahraga non-marking court shoes</li>
+            </ul>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            <a
+              :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.name + ' ' + venue.address)}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-xl border border-stone-300 bg-white px-3 py-2 text-center text-xs font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              Google Maps ↗
+            </a>
+            <a
+              :href="`https://wa.me/62${venue.phone.replace(/^0/, '')}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-xl bg-terracotta-600 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-terracotta-700"
+            >
+              Chat WhatsApp ↗
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Floating Bottom Bar saat ada slot yang dipilih -->
       <div
         v-if="selectedItems.length > 0"
-        class="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-4xl rounded-xl border border-terracotta-700 bg-stone-900 px-5 py-3.5 text-white shadow-2xl flex flex-wrap items-center justify-between gap-4"
+        class="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-4xl rounded-2xl border border-terracotta-600 bg-stone-900 px-5 py-3.5 text-white shadow-2xl flex flex-wrap items-center justify-between gap-4"
       >
         <div>
           <p class="text-xs text-terracotta-300 font-semibold uppercase">
             {{ selectedItems.length }} Slot Dipilih ({{ totalSelectedHours }} Jam)
           </p>
-          <p class="text-base font-bold">
-            Estimasi Total: {{ formatIdr(estimatedTotal) }}
-          </p>
+          <p class="text-base font-bold">Estimasi Total: {{ formatIdr(estimatedTotal) }}</p>
         </div>
 
         <div class="flex items-center gap-3">
           <button
             type="button"
-            class="rounded-md border border-stone-600 px-3 py-2 text-xs font-medium text-stone-200 hover:bg-stone-800"
+            class="rounded-xl border border-stone-600 px-3.5 py-2 text-xs font-medium text-stone-200 hover:bg-stone-800"
             @click="clearSelectedSlots"
           >
-            Reset Pilihan
+            Reset
           </button>
           <button
             type="button"
-            class="rounded-md bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-500"
+            class="rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-500"
             @click="openCheckoutModal"
           >
             Lanjut Booking ({{ selectedItems.length }} Slot) →
@@ -528,7 +826,7 @@ onBeforeUnmount(() => {
           @click.self="closeBookingModal"
         >
           <div
-            class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-stone-200 bg-white p-6 shadow-xl space-y-5"
+            class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-6 shadow-xl space-y-5"
           >
             <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
               <div>
@@ -542,8 +840,8 @@ onBeforeUnmount(() => {
 
               <div class="flex items-start gap-3">
                 <div class="text-right">
-                  <p class="text-xs text-stone-500">Total Tagihan Server</p>
-                  <p class="text-xl font-bold text-terracotta-800">
+                  <p class="text-xs text-stone-500">Total Tagihan</p>
+                  <p class="text-xl font-bold text-terracotta-700">
                     {{
                       quoteLoading
                         ? 'Menghitung...'
@@ -566,7 +864,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="bookingError"
-              class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+              class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
             >
               {{ bookingError }}
             </div>
@@ -576,8 +874,7 @@ onBeforeUnmount(() => {
             </div>
 
             <template v-else-if="quote">
-              <!-- Daftar Sesi/Lapangan yang telah digabung otomatis -->
-              <div class="rounded-lg bg-stone-50 p-3.5 space-y-2 text-xs">
+              <div class="rounded-xl bg-[#FAF8F6] p-3.5 space-y-2 text-xs">
                 <p class="font-semibold text-stone-700">Rincian Sesi & Lapangan:</p>
                 <div
                   v-for="(line, idx) in quote.items"
@@ -595,7 +892,9 @@ onBeforeUnmount(() => {
                       menit)
                     </span>
                   </div>
-                  <span class="font-semibold text-terracotta-800">{{ formatIdr(line.total_price) }}</span>
+                  <span class="font-semibold text-terracotta-800">
+                    {{ formatIdr(line.total_price) }}
+                  </span>
                 </div>
               </div>
 
@@ -609,8 +908,8 @@ onBeforeUnmount(() => {
                     type="text"
                     required
                     autofocus
-                    placeholder="Masukkan nama pemesan atau nama komunitas/turnamen"
-                    class="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
+                    placeholder="Masukkan nama pemesan atau nama komunitas"
+                    class="mt-1 block w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
                   />
                 </div>
 
@@ -624,7 +923,7 @@ onBeforeUnmount(() => {
                       type="text"
                       required
                       placeholder="08..."
-                      class="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
+                      class="mt-1 block w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
                     />
                   </div>
 
@@ -634,7 +933,7 @@ onBeforeUnmount(() => {
                       v-model="customerForm.customer_email"
                       type="email"
                       placeholder="email@contoh.com"
-                      class="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
+                      class="mt-1 block w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -648,11 +947,11 @@ onBeforeUnmount(() => {
                       v-model="customerForm.promotion_code"
                       type="text"
                       placeholder="Masukkan kode voucher"
-                      class="block flex-1 rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-sm uppercase focus:border-terracotta-600 focus:outline-none"
+                      class="block flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 font-mono text-sm uppercase focus:border-terracotta-600 focus:outline-none"
                     />
                     <button
                       type="button"
-                      class="rounded-md border border-terracotta-600 px-3 py-2 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+                      class="rounded-xl border border-terracotta-600 px-3.5 py-2 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
                       @click="openCheckoutModal"
                     >
                       Terapkan Voucher
@@ -667,14 +966,12 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div>
-                  <label class="block text-xs font-medium text-stone-700">
-                    Catatan (Misal: Sparring Komunitas / Turnamen)
-                  </label>
+                  <label class="block text-xs font-medium text-stone-700">Catatan Tambahan</label>
                   <input
                     v-model="customerForm.notes"
                     type="text"
                     placeholder="Catatan opsional"
-                    class="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
+                    class="mt-1 block w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
                   />
                 </div>
 
@@ -682,7 +979,7 @@ onBeforeUnmount(() => {
                   <button
                     type="button"
                     :disabled="holdSubmitting"
-                    class="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                    class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
                     @click="closeBookingModal"
                   >
                     Ubah Pilihan Jam
@@ -690,7 +987,7 @@ onBeforeUnmount(() => {
                   <button
                     type="submit"
                     :disabled="holdSubmitting"
-                    class="rounded-md bg-terracotta-700 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-800 disabled:opacity-50"
+                    class="rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-700 disabled:opacity-50"
                   >
                     {{
                       holdSubmitting
@@ -704,48 +1001,6 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </Teleport>
-
-      <!-- Jam Operasional & Harga -->
-      <div class="grid gap-6 sm:grid-cols-2">
-        <div class="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-          <h2 class="text-lg font-bold text-stone-900">Jam Operasional</h2>
-          <ul class="divide-y divide-stone-100 text-sm">
-            <li
-              v-for="item in venue.operating_hours"
-              :key="item.day_of_week"
-              class="py-2 flex items-center justify-between"
-            >
-              <span class="font-medium text-stone-700">{{ dayNames[item.day_of_week] }}</span>
-              <span v-if="item.is_closed" class="text-red-700 font-medium">Tutup</span>
-              <span v-else class="text-stone-900">
-                {{ item.open_time.slice(0, 5) }} – {{ item.close_time.slice(0, 5) }} WITA
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-          <h2 class="text-lg font-bold text-stone-900">Tarif Sewa Lapangan</h2>
-          <ul class="divide-y divide-stone-100 text-sm">
-            <li
-              v-for="rule in venue.pricing_rules"
-              :key="rule.id"
-              class="py-2.5 flex items-center justify-between gap-4"
-            >
-              <div>
-                <p class="font-medium text-stone-900">{{ rule.name }}</p>
-                <p class="text-xs text-stone-500">
-                  {{ rule.start_time.slice(0, 5) }} – {{ rule.end_time.slice(0, 5) }} WITA
-                  <span v-if="rule.day_of_week !== null"> • {{ dayNames[rule.day_of_week] }}</span>
-                </p>
-              </div>
-              <span class="font-semibold text-terracotta-800">
-                {{ formatIdr(rule.price_per_hour) }} / jam
-              </span>
-            </li>
-          </ul>
-        </div>
-      </div>
     </template>
-  </section>
+  </div>
 </template>
