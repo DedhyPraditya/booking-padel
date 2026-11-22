@@ -201,7 +201,7 @@ onMounted(fetchStatus)
 
       <!-- E-VOUCHER / TIKET RESMI (Desain Tiket Lapangan + QR Check-In) -->
       <div
-        class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm print:border-stone-400 print:shadow-none"
+        class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm print:break-inside-avoid print:border-stone-300 print:shadow-none"
       >
         <!-- Header Tiket Terracotta -->
         <div
@@ -236,10 +236,10 @@ onMounted(fetchStatus)
           </div>
         </div>
 
-        <div class="p-6 space-y-6">
+        <div class="p-6 space-y-6 print:p-5 print:space-y-4">
           <!-- Kode Booking + QR Code Verifikasi Check-In -->
           <div
-            class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-dashed border-stone-200 pb-6"
+            class="flex flex-col sm:flex-row print:flex-row sm:items-center print:items-center justify-between gap-6 border-b border-dashed border-stone-200 pb-6 print:pb-4"
           >
             <div class="space-y-2">
               <p class="text-xs font-medium text-stone-500">Kode Booking Resmi</p>
@@ -294,7 +294,7 @@ onMounted(fetchStatus)
           </div>
 
           <!-- Informasi Pemesan & Jadwal -->
-          <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+          <dl class="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-3 text-sm">
             <div class="rounded-xl bg-[#FAF8F6] p-3.5">
               <dt class="text-xs text-stone-500">Nama Pemesan</dt>
               <dd class="mt-0.5 font-bold text-stone-900">{{ booking.customer_name }}</dd>

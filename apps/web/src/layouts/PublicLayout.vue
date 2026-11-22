@@ -3,8 +3,8 @@ import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-[#FAF8F6] text-stone-900">
-    <header class="sticky top-0 z-30 border-b border-stone-200/80 bg-white/95 backdrop-blur-xs">
+  <div class="min-h-screen flex flex-col bg-[#FAF8F6] text-stone-900 print:min-h-0 print:bg-white">
+    <header class="sticky top-0 z-30 border-b border-stone-200/80 bg-white/95 backdrop-blur-xs print:hidden">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <RouterLink :to="{ name: 'home' }" class="flex items-center gap-2.5">
           <span
@@ -41,11 +41,11 @@ import { RouterLink, RouterView } from 'vue-router'
       </div>
     </header>
 
-    <main class="flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
+    <main class="flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 print:p-0 print:max-w-none">
       <RouterView />
     </main>
 
-    <footer class="border-t border-stone-200 bg-white py-6">
+    <footer class="border-t border-stone-200 bg-white py-6 print:hidden">
       <div
         class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-500"
       >
