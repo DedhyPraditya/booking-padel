@@ -1,0 +1,6 @@
+#!/usr/bin/env php
+<?php
+
+// Root proxy to apps/api/artisan for convenience in the monorepo root
+chdir(__DIR__.'/apps/api');
+require __DIR__.'/apps/api/artisan';
