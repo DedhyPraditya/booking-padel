@@ -79,16 +79,16 @@ async function loadOverview(): Promise<void> {
   loading.value = true
   errorMessage.value = null
   try {
-    const [revRes, utilRes, bookingsRes, paymentsRes] = await Promise.all([
-      apiRequest<RevenueSummary>('/admin/reports/revenue'),
-      apiRequest<UtilizationSummary[]>('/admin/reports/utilization'),
-      apiRequest<Booking[]>('/admin/bookings'),
-      apiRequest<Payment[]>('/admin/payments?status=pending'),
-    ])
-    revenue.value = revRes.data
-    utilization.value = utilRes.data
-    recentBookings.value = bookingsRes.data.slice(0, 6)
-    pendingPayments.value = paymentsRes.data.slice(0, 5)
+    const res = await apiRequest<{
+      revenue: RevenueSummary
+      utilization: UtilizationSummary[]
+      recent_bookings: Booking[]
+      pending_payments: Payment[]
+    }>('/admin/dashboard-overview')
+    revenue.value = res.data.revenue
+    utilization.value = res.data.utilization
+    recentBookings.value = res.data.recent_bookings
+    pendingPayments.value = res.data.pending_payments
   } catch (err) {
     errorMessage.value =
       err instanceof ApiError ? err.message : 'Gagal memuat ringkasan dashboard.'

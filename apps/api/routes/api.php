@@ -192,6 +192,9 @@ Route::prefix('v1')->group(function (): void {
                 ->name('admin.staff.store');
 
             // Reports & Audit Logs
+            Route::get('/dashboard-overview', [AdminReportController::class, 'overview'])
+                ->middleware('permission.venue:venue.view')
+                ->name('admin.reports.overview');
             Route::get('/reports/revenue', [AdminReportController::class, 'revenue'])
                 ->middleware('permission.venue:report.view')
                 ->name('admin.reports.revenue');

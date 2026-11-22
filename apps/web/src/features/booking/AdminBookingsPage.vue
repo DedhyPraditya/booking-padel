@@ -127,14 +127,19 @@ async function loadData(): Promise<void> {
     if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim())
 
     const qs = params.toString() ? `?${params.toString()}` : ''
-    const [bookingsRes, venuesRes, courtsRes] = await Promise.all([
-      apiRequest<Booking[]>(`/admin/bookings${qs}`),
-      apiRequest<Venue[]>('/admin/venues'),
-      apiRequest<Court[]>('/admin/courts'),
-    ])
-    bookings.value = bookingsRes.data
-    venues.value = venuesRes.data
-    courts.value = courtsRes.data
+    if (venues.value.length === 0 || courts.value.length === 0) {
+      const [bookingsRes, venuesRes, courtsRes] = await Promise.all([
+        apiRequest<Booking[]>(`/admin/bookings${qs}`),
+        apiRequest<Venue[]>('/admin/venues'),
+        apiRequest<Court[]>('/admin/courts'),
+      ])
+      bookings.value = bookingsRes.data
+      venues.value = venuesRes.data
+      courts.value = courtsRes.data
+    } else {
+      const bookingsRes = await apiRequest<Booking[]>(`/admin/bookings${qs}`)
+      bookings.value = bookingsRes.data
+    }
 
     if (!manualForm.value.venue_id && venues.value[0]) {
       manualForm.value.venue_id = venues.value[0].id

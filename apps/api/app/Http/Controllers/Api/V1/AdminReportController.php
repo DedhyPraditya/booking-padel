@@ -14,6 +14,101 @@ use Illuminate\Http\Request;
 
 class AdminReportController extends Controller
 {
+    /**
+     * Combined single-request payload for the Admin Overview Dashboard.
+     */
+    public function overview(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $venueIds = $user->isSuperAdmin() ? null : $user->accessibleVenueIds();
+
+        // 1. Single grouped query for payment sums by status
+        $paymentQuery = Payment::query();
+        $bookingQuery = Booking::query();
+        $courtQuery = Court::query()->orderBy('code');
+
+        if ($venueIds !== null) {
+            $paymentQuery->whereHas('booking', fn ($q) => $q->whereIn('venue_id', $venueIds));
+            $bookingQuery->whereIn('venue_id', $venueIds);
+            $courtQuery->whereIn('venue_id', $venueIds);
+        }
+
+        $paymentSums = (clone $paymentQuery)
+            ->selectRaw('status, COALESCE(SUM(amount), 0) as total_amount')
+            ->groupBy('status')
+            ->pluck('total_amount', 'status');
+
+        $paidTotal = (float) ($paymentSums['paid'] ?? 0);
+        $pendingVerificationTotal = (float) ($paymentSums['pending'] ?? 0);
+        $unpaidTotal = (float) ($paymentSums['unpaid'] ?? 0);
+        $refundedTotal = (float) ($paymentSums['refunded'] ?? 0) + (float) ($paymentSums['partially_refunded'] ?? 0);
+
+        $bookingsByStatus = (clone $bookingQuery)
+            ->selectRaw('status, count(*) as total_count')
+            ->groupBy('status')
+            ->pluck('total_count', 'status');
+
+        // 2. Single grouped query for court utilization
+        $courts = $courtQuery->get(['id', 'code', 'name', 'court_type']);
+        $courtAggregates = BookingItem::query()
+            ->whereIn('court_id', $courts->pluck('id'))
+            ->whereHas('booking', fn ($q) => $q->whereIn('status', ['confirmed', 'checked_in', 'completed']))
+            ->selectRaw('court_id, COUNT(*) as sessions_count, COALESCE(SUM(duration_minutes), 0) as total_minutes, COALESCE(SUM(total_price), 0) as total_revenue')
+            ->groupBy('court_id')
+            ->get()
+            ->keyBy('court_id');
+
+        $utilization = $courts->map(function (Court $court) use ($courtAggregates) {
+            $agg = $courtAggregates->get($court->id);
+            $bookedMinutes = (int) ($agg->total_minutes ?? 0);
+
+            return [
+                'court_id' => $court->id,
+                'court_code' => $court->code,
+                'court_name' => $court->name,
+                'court_type' => $court->court_type,
+                'confirmed_sessions_count' => (int) ($agg->sessions_count ?? 0),
+                'booked_minutes' => $bookedMinutes,
+                'booked_hours' => round($bookedMinutes / 60.0, 2),
+                'revenue' => number_format((float) ($agg->total_revenue ?? 0), 2, '.', ''),
+            ];
+        })->values();
+
+        // 3. Recent bookings (limit 6) & Pending payments (limit 5)
+        $recentBookings = (clone $bookingQuery)
+            ->with(['items'])
+            ->orderByDesc('start_at')
+            ->limit(6)
+            ->get();
+
+        $pendingPayments = (clone $paymentQuery)
+            ->where('status', 'pending')
+            ->with(['booking:id,booking_code,customer_name,customer_phone'])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'data' => [
+                'revenue' => [
+                    'currency' => 'IDR',
+                    'paid_revenue' => number_format($paidTotal, 2, '.', ''),
+                    'pending_verification_amount' => number_format($pendingVerificationTotal, 2, '.', ''),
+                    'unpaid_hold_amount' => number_format($unpaidTotal, 2, '.', ''),
+                    'refunded_amount' => number_format($refundedTotal, 2, '.', ''),
+                    'total_bookings' => array_sum($bookingsByStatus->all()),
+                    'bookings_by_status' => $bookingsByStatus,
+                ],
+                'utilization' => $utilization,
+                'recent_bookings' => $recentBookings,
+                'pending_payments' => $pendingPayments,
+            ],
+            'meta' => (object) [],
+        ]);
+    }
+
     public function revenue(Request $request): JsonResponse
     {
         /** @var User $user */
@@ -50,10 +145,15 @@ class AdminReportController extends Controller
             $bookingQuery->whereDate('start_at', '<=', $to);
         }
 
-        $paidTotal = (float) (clone $paymentQuery)->where('status', 'paid')->sum('amount');
-        $pendingVerificationTotal = (float) (clone $paymentQuery)->where('status', 'pending')->sum('amount');
-        $unpaidTotal = (float) (clone $paymentQuery)->where('status', 'unpaid')->sum('amount');
-        $refundedTotal = (float) (clone $paymentQuery)->whereIn('status', ['refunded', 'partially_refunded'])->sum('amount');
+        $paymentSums = (clone $paymentQuery)
+            ->selectRaw('status, COALESCE(SUM(amount), 0) as total_amount')
+            ->groupBy('status')
+            ->pluck('total_amount', 'status');
+
+        $paidTotal = (float) ($paymentSums['paid'] ?? 0);
+        $pendingVerificationTotal = (float) ($paymentSums['pending'] ?? 0);
+        $unpaidTotal = (float) ($paymentSums['unpaid'] ?? 0);
+        $refundedTotal = (float) ($paymentSums['refunded'] ?? 0) + (float) ($paymentSums['partially_refunded'] ?? 0);
 
         $bookingsByStatus = (clone $bookingQuery)
             ->selectRaw('status, count(*) as total_count')
@@ -93,21 +193,28 @@ class AdminReportController extends Controller
 
         $courts = $courtQuery->get();
 
-        $utilization = $courts->map(function (Court $court) use ($request) {
-            $itemQuery = BookingItem::query()
-                ->where('court_id', $court->id)
-                ->whereHas('booking', fn ($q) => $q->whereIn('status', ['confirmed', 'checked_in', 'completed']));
+        $itemQuery = BookingItem::query()
+            ->whereIn('court_id', $courts->pluck('id'))
+            ->whereHas('booking', fn ($q) => $q->whereIn('status', ['confirmed', 'checked_in', 'completed']));
 
-            if ($request->filled('from_date')) {
-                $itemQuery->whereDate('start_at', '>=', (string) $request->query('from_date'));
-            }
-            if ($request->filled('to_date')) {
-                $itemQuery->whereDate('start_at', '<=', (string) $request->query('to_date'));
-            }
+        if ($request->filled('from_date')) {
+            $itemQuery->whereDate('start_at', '>=', (string) $request->query('from_date'));
+        }
+        if ($request->filled('to_date')) {
+            $itemQuery->whereDate('start_at', '<=', (string) $request->query('to_date'));
+        }
 
-            $bookedMinutes = (int) (clone $itemQuery)->sum('duration_minutes');
-            $bookedSessions = (int) (clone $itemQuery)->count();
-            $revenue = (float) (clone $itemQuery)->sum('total_price');
+        $aggregates = $itemQuery
+            ->selectRaw('court_id, COUNT(*) as sessions_count, COALESCE(SUM(duration_minutes), 0) as total_minutes, COALESCE(SUM(total_price), 0) as total_revenue')
+            ->groupBy('court_id')
+            ->get()
+            ->keyBy('court_id');
+
+        $utilization = $courts->map(function (Court $court) use ($aggregates) {
+            $agg = $aggregates->get($court->id);
+            $bookedMinutes = (int) ($agg->total_minutes ?? 0);
+            $bookedSessions = (int) ($agg->sessions_count ?? 0);
+            $revenue = (float) ($agg->total_revenue ?? 0);
 
             return [
                 'court_id' => $court->id,

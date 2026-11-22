@@ -32,6 +32,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    private ?bool $memoIsSuperAdmin = null;
+
+    /** @var Collection<int, string>|null */
+    private ?Collection $memoAccessibleVenueIds = null;
+
     protected function casts(): array
     {
         return [
@@ -61,7 +66,14 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->roles()->where('roles.name', 'super_admin')->exists();
+        if ($this->memoIsSuperAdmin !== null) {
+            return $this->memoIsSuperAdmin;
+        }
+
+        $this->loadMissing('userRoles.role.permissions', 'venueAccesses.role.permissions');
+
+        return $this->memoIsSuperAdmin = $this->userRoles
+            ->contains(fn (UserRole $ur) => $ur->role?->name === 'super_admin');
     }
 
     public function hasRole(string $roleName, ?string $organizationId = null, ?string $venueId = null): bool
@@ -70,25 +82,21 @@ class User extends Authenticatable
             return true;
         }
 
-        $query = $this->userRoles()
-            ->whereHas('role', fn ($q) => $q->where('name', $roleName));
+        $this->loadMissing('userRoles.role');
 
-        if ($venueId !== null) {
-            $venue = Venue::find($venueId);
-            $orgId = $organizationId ?? $venue?->organization_id;
+        return $this->userRoles->contains(function (UserRole $ur) use ($roleName, $organizationId, $venueId) {
+            if ($ur->role?->name !== $roleName) {
+                return false;
+            }
+            if ($venueId !== null) {
+                return $ur->venue_id === $venueId || ($ur->venue_id === null && $ur->organization_id === $organizationId);
+            }
+            if ($organizationId !== null) {
+                return $ur->organization_id === $organizationId;
+            }
 
-            $query->where(function ($q) use ($venueId, $orgId) {
-                $q->where('venue_id', $venueId)
-                    ->orWhere(function ($q2) use ($orgId) {
-                        $q2->whereNull('venue_id')
-                            ->where('organization_id', $orgId);
-                    });
-            });
-        } elseif ($organizationId !== null) {
-            $query->where('organization_id', $organizationId);
-        }
-
-        return $query->exists();
+            return true;
+        });
     }
 
     public function hasPermission(string $permissionName, ?string $venueId = null, ?string $organizationId = null): bool
@@ -101,16 +109,30 @@ class User extends Authenticatable
             return false;
         }
 
-        $roleIds = $this->scopedRoleIds($venueId, $organizationId);
+        $this->loadMissing('userRoles.role.permissions', 'venueAccesses.role.permissions');
 
-        if ($roleIds->isEmpty()) {
-            return false;
+        $hasInUserRoles = $this->userRoles->contains(function (UserRole $ur) use ($permissionName, $venueId, $organizationId) {
+            if ($venueId !== null && $ur->venue_id !== null && $ur->venue_id !== $venueId) {
+                return false;
+            }
+            if ($organizationId !== null && $ur->organization_id !== null && $ur->organization_id !== $organizationId) {
+                return false;
+            }
+
+            return $ur->role?->permissions?->contains('name', $permissionName) ?? false;
+        });
+
+        if ($hasInUserRoles) {
+            return true;
         }
 
-        return Permission::query()
-            ->where('name', $permissionName)
-            ->whereHas('roles', fn ($q) => $q->whereIn('roles.id', $roleIds))
-            ->exists();
+        return $this->venueAccesses->contains(function (UserVenueAccess $va) use ($permissionName, $venueId) {
+            if ($venueId !== null && $va->venue_id !== $venueId) {
+                return false;
+            }
+
+            return $va->role?->permissions?->contains('name', $permissionName) ?? false;
+        });
     }
 
     public function canAccessVenue(string $venueId): bool
@@ -119,28 +141,7 @@ class User extends Authenticatable
             return true;
         }
 
-        $venue = Venue::find($venueId);
-        if (! $venue) {
-            return false;
-        }
-
-        $hasDirectVenueAccess = $this->venueAccesses()
-            ->where('venue_id', $venueId)
-            ->exists();
-
-        if ($hasDirectVenueAccess) {
-            return true;
-        }
-
-        return $this->userRoles()
-            ->where(function ($q) use ($venue) {
-                $q->where('venue_id', $venue->id)
-                    ->orWhere(function ($q2) use ($venue) {
-                        $q2->where('organization_id', $venue->organization_id)
-                            ->whereNull('venue_id');
-                    });
-            })
-            ->exists();
+        return $this->accessibleVenueIds()->contains($venueId);
     }
 
     /**
@@ -148,59 +149,26 @@ class User extends Authenticatable
      */
     public function accessibleVenueIds(): Collection
     {
-        if ($this->isSuperAdmin()) {
-            return Venue::pluck('id');
+        if ($this->memoAccessibleVenueIds !== null) {
+            return $this->memoAccessibleVenueIds;
         }
 
-        $directIds = $this->venueAccesses()->pluck('venue_id');
-        $roleVenueIds = $this->userRoles()->whereNotNull('venue_id')->pluck('venue_id');
-        $orgIds = $this->userRoles()->whereNotNull('organization_id')->whereNull('venue_id')->pluck('organization_id');
+        if ($this->isSuperAdmin()) {
+            return $this->memoAccessibleVenueIds = Venue::pluck('id');
+        }
+
+        $this->loadMissing('userRoles', 'venueAccesses');
+
+        $directIds = $this->venueAccesses->pluck('venue_id');
+        $roleVenueIds = $this->userRoles->whereNotNull('venue_id')->pluck('venue_id');
+        $orgIds = $this->userRoles->whereNotNull('organization_id')->whereNull('venue_id')->pluck('organization_id');
         $orgVenueIds = $orgIds->isNotEmpty()
             ? Venue::whereIn('organization_id', $orgIds)->pluck('id')
             : collect();
 
-        return $directIds->merge($roleVenueIds)->merge($orgVenueIds)->unique()->values();
-    }
-
-    /**
-     * @return Collection<int, string>
-     */
-    private function scopedRoleIds(?string $venueId = null, ?string $organizationId = null): Collection
-    {
-        $query = $this->userRoles();
-
-        if ($venueId !== null) {
-            $venue = Venue::find($venueId);
-            $orgId = $organizationId ?? $venue?->organization_id;
-
-            $roleIdsFromUserRoles = $query->where(function ($q) use ($venueId, $orgId) {
-                $q->where('venue_id', $venueId)
-                    ->orWhere(function ($q2) use ($orgId) {
-                        $q2->where('organization_id', $orgId)->whereNull('venue_id');
-                    })
-                    ->orWhere(function ($q3) {
-                        $q3->whereNull('organization_id')->whereNull('venue_id');
-                    });
-            })->pluck('role_id');
-
-            $roleIdsFromVenueAccess = $this->venueAccesses()
-                ->where('venue_id', $venueId)
-                ->pluck('role_id');
-
-            return $roleIdsFromUserRoles->merge($roleIdsFromVenueAccess)->unique()->values();
-        }
-
-        if ($organizationId !== null) {
-            return $query->where(function ($q) use ($organizationId) {
-                $q->where('organization_id', $organizationId)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNull('organization_id')->whereNull('venue_id');
-                    });
-            })->pluck('role_id')->unique()->values();
-        }
-
-        return $query->pluck('role_id')
-            ->merge($this->venueAccesses()->pluck('role_id'))
+        return $this->memoAccessibleVenueIds = $directIds
+            ->merge($roleVenueIds)
+            ->merge($orgVenueIds)
             ->unique()
             ->values();
     }

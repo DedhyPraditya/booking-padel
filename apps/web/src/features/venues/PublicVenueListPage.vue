@@ -214,18 +214,24 @@ async function loadPrimaryVenue(): Promise<void> {
   loading.value = true
   errorMessage.value = null
   try {
-    const listRes = await apiRequest<Venue[]>('/venues')
-    const first = listRes.data[0]
-    if (!first) {
-      venue.value = null
-      return
-    }
-    const detailRes = await apiRequest<Venue>(`/venues/${encodeURIComponent(first.slug)}`)
+    const detailRes = await apiRequest<Venue>('/venues/padel-makassar')
     venue.value = detailRes.data
     await loadAvailability()
-  } catch (err) {
-    errorMessage.value =
-      err instanceof ApiError ? err.message : 'Gagal memuat informasi Padel Makassar.'
+  } catch {
+    try {
+      const listRes = await apiRequest<Venue[]>('/venues')
+      const first = listRes.data[0]
+      if (!first) {
+        venue.value = null
+        return
+      }
+      const detailRes = await apiRequest<Venue>(`/venues/${encodeURIComponent(first.slug)}`)
+      venue.value = detailRes.data
+      await loadAvailability()
+    } catch (err) {
+      errorMessage.value =
+        err instanceof ApiError ? err.message : 'Gagal memuat informasi Padel Makassar.'
+    }
   } finally {
     loading.value = false
   }
