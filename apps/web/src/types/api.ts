@@ -99,7 +99,7 @@ export interface AvailabilitySlot {
   start_time: string
   end_time: string
   available: boolean
-  status: 'available' | 'held' | 'booked' | 'blocked' | 'maintenance' | 'unpriced'
+  status: 'available' | 'held' | 'booked' | 'blocked' | 'maintenance' | 'unpriced' | 'past'
   price: number | null
 }
 

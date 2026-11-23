@@ -29,7 +29,8 @@ const venue = ref<Venue | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
-const selectedDate = ref(new Date().toISOString().slice(0, 10))
+const todayStr = new Date().toLocaleDateString('sv')
+const selectedDate = ref(todayStr)
 const selectedDuration = ref(60)
 const availability = ref<DailyAvailability | null>(null)
 const availabilityLoading = ref(false)
@@ -81,6 +82,7 @@ function slotStatusText(status: AvailabilitySlot['status']): string {
     blocked: 'Diblokir',
     maintenance: 'Maintenance',
     unpriced: 'Tutup',
+    past: 'Sudah Lewat',
   }
   return map[status] || status
 }
@@ -294,6 +296,7 @@ onBeforeUnmount(() => {
           <input
             v-model="selectedDate"
             type="date"
+            :min="todayStr"
             class="mt-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-semibold"
             @change="loadAvailability"
           />
@@ -394,8 +397,10 @@ onBeforeUnmount(() => {
                   slot.available && !isSlotSelected(court.court_id, slot.start_at),
                 'border-amber-200 bg-amber-50 text-amber-800 cursor-not-allowed':
                   slot.status === 'held',
+                'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-60':
+                  slot.status === 'past',
                 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed':
-                  !slot.available && slot.status !== 'held',
+                  !slot.available && slot.status !== 'held' && slot.status !== 'past',
               }"
               @click="toggleSlot(court, slot)"
             >

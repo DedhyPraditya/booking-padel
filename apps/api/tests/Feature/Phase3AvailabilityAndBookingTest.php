@@ -351,4 +351,28 @@ class Phase3AvailabilityAndBookingTest extends TestCase
                 ->count()
         );
     }
+
+    public function test_past_slots_are_marked_past_and_cannot_be_booked(): void
+    {
+        // Availability query for today
+        $today = CarbonImmutable::now('Asia/Makassar')->format('Y-m-d');
+        $availResp = $this->getJson("/api/v1/availability?venue_id={$this->venue->id}&date={$today}");
+        $availResp->assertOk();
+
+        // Attempting to book a past slot must be rejected with 422
+        $pastStart = CarbonImmutable::now('Asia/Makassar')->subHours(2)->format('Y-m-d\TH:i:00P');
+        $pastEnd = CarbonImmutable::now('Asia/Makassar')->subHour()->format('Y-m-d\TH:i:00P');
+
+        $holdResp = $this->postJson('/api/v1/booking-holds', [
+            'venue_id' => $this->venue->id,
+            'court_id' => $this->court1->id,
+            'start_at' => $pastStart,
+            'end_at' => $pastEnd,
+            'customer_name' => 'Past Booker',
+            'customer_phone' => '081234567890',
+        ]);
+
+        $holdResp->assertUnprocessable()
+            ->assertJsonValidationErrors(['start_at']);
+    }
 }

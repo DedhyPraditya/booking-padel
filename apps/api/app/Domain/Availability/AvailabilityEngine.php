@@ -104,6 +104,7 @@ class AvailabilityEngine
 
         $dayOpen = CarbonImmutable::createFromFormat('Y-m-d H:i', "{$date} {$openTimeStr}", $tz);
         $dayClose = CarbonImmutable::createFromFormat('Y-m-d H:i', "{$date} {$closeTimeStr}", $tz);
+        $nowInVenueTz = CarbonImmutable::now($tz);
 
         $activeReservations = CourtReservation::query()
             ->where('venue_id', $venue->id)
@@ -145,7 +146,10 @@ class AvailabilityEngine
                 $slotStatus = 'available';
                 $available = true;
 
-                if ($court->status !== 'active') {
+                if ($cursor->lessThanOrEqualTo($nowInVenueTz)) {
+                    $slotStatus = 'past';
+                    $available = false;
+                } elseif ($court->status !== 'active') {
                     $slotStatus = 'maintenance';
                     $available = false;
                 } else {
@@ -233,6 +237,11 @@ class AvailabilityEngine
 
         if ($localEnd->lessThanOrEqualTo($localStart)) {
             throw new InvalidArgumentException('Waktu selesai harus setelah waktu mulai.');
+        }
+
+        $nowInVenueTz = CarbonImmutable::now($tz);
+        if ($localStart->lessThanOrEqualTo($nowInVenueTz)) {
+            throw new InvalidArgumentException('Waktu mulai booking tidak boleh di masa lampau.');
         }
 
         if ($localStart->format('Y-m-d') !== $localEnd->format('Y-m-d')) {
