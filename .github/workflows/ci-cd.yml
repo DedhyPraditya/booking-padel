@@ -47,11 +47,14 @@ jobs:
         working-directory: apps/api
         run: ./vendor/bin/pint --test
 
+      - name: Generate dynamic test APP_KEY
+        working-directory: apps/api
+        run: echo "APP_KEY=$(php artisan key:generate --show)" >> $GITHUB_ENV
+
       - name: Run PHPUnit test suite against real PostgreSQL 16
         working-directory: apps/api
         env:
           APP_ENV: testing
-          APP_KEY: base64:yAIKnCS/Q1ASiQ6di36yEtULkJEOIzw/KV+c1tu0QJ0=
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
