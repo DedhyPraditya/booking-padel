@@ -232,11 +232,11 @@ onMounted(fetchStatus)
           class="bg-terracotta-600 px-6 py-5 text-white flex flex-wrap items-center justify-between gap-4"
         >
           <div class="flex items-center gap-3">
-            <span
-              class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 font-bold text-white border border-white/25"
-            >
-              PM
-            </span>
+            <img
+              src="/logo.png"
+              alt="PADEL MAKASSAR"
+              class="h-12 w-12 shrink-0 rounded-xl bg-white/95 p-1 object-contain shadow-2xs"
+            />
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-wider text-terracotta-100">
                 {{ isConfirmedOrPaid ? 'E-VOUCHER & COURT PASS RESMI' : 'INVOICE RESERVASI' }}

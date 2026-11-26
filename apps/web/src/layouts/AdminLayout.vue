@@ -114,11 +114,11 @@ onMounted(loadPrimaryVenueId)
     <aside class="hidden md:flex md:w-68 md:flex-col border-r border-stone-200/90 bg-white">
       <div class="h-16 px-6 flex items-center justify-between border-b border-stone-100">
         <RouterLink :to="{ name: 'admin-overview' }" class="flex items-center gap-3">
-          <span
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-terracotta-600 text-sm font-bold text-white shadow-xs"
-          >
-            PM
-          </span>
+          <img
+            src="/logo.webp"
+            alt="Logo Padel Makassar"
+            class="h-10 w-10 shrink-0 object-contain"
+          />
           <div>
             <p class="text-sm font-bold tracking-tight text-stone-900 leading-none">
               PADEL MAKASSAR

@@ -193,30 +193,42 @@ onMounted(loadVenue)
         v-reveal
         class="relative overflow-hidden rounded-3xl bg-linear-to-br from-stone-950 via-stone-900 to-[#27140e] text-white shadow-xl"
       >
-        <div class="relative p-8 sm:p-12 lg:p-16 space-y-8">
-          <div class="max-w-3xl space-y-4">
-            <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08]">
-              PADEL MAKASSAR
-            </h1>
-            <p class="text-base sm:text-lg text-stone-300 font-medium leading-relaxed max-w-2xl">
-              Pusat olahraga padel pertama di Makassar dengan 2 lapangan semi-indoor berstandar kompetisi. Didukung sistem booking online anti bentrok jadwal real-time.
-            </p>
-          </div>
+        <div class="relative p-8 sm:p-12 lg:p-14 space-y-10">
+          <div class="grid gap-8 lg:grid-cols-12 lg:items-center">
+            <div class="lg:col-span-7 space-y-6">
+              <div class="space-y-4">
+                <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08]">
+                  PADEL MAKASSAR
+                </h1>
+                <p class="text-base sm:text-lg text-stone-300 font-medium leading-relaxed max-w-2xl">
+                  Pusat olahraga padel pertama di Makassar dengan 2 lapangan semi-indoor berstandar kompetisi. Didukung sistem booking online anti bentrok jadwal real-time.
+                </p>
+              </div>
 
-          <div class="flex flex-wrap items-center gap-4 pt-2">
-            <RouterLink
-              :to="{ name: 'booking' }"
-              class="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-terracotta-600 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-terracotta-900/50 hover:bg-terracotta-500 hover:-translate-y-0.5"
-            >
-              <AppIcon name="calendar" class="w-4 h-4 text-white" />
-              Booking Lapangan Sekarang
-            </RouterLink>
-            <RouterLink
-              :to="{ name: 'booking-lookup' }"
-              class="btn-tactile inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10"
-            >
-              Cek Pesanan Saya
-            </RouterLink>
+              <div class="flex flex-wrap items-center gap-4 pt-1">
+                <RouterLink
+                  :to="{ name: 'booking' }"
+                  class="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-terracotta-600 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-terracotta-900/50 hover:bg-terracotta-500 hover:-translate-y-0.5"
+                >
+                  <AppIcon name="calendar" class="w-4 h-4 text-white" />
+                  Booking Lapangan Sekarang
+                </RouterLink>
+                <RouterLink
+                  :to="{ name: 'booking-lookup' }"
+                  class="btn-tactile inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10"
+                >
+                  Cek Pesanan Saya
+                </RouterLink>
+              </div>
+            </div>
+
+            <div class="lg:col-span-5 flex justify-center lg:justify-end">
+              <img
+                src="/logo.webp"
+                alt="Logo Resmi Padel Makassar"
+                class="w-56 sm:w-64 lg:w-72 h-auto object-contain drop-shadow-[0_18px_32px_rgba(194,94,62,0.28)] transition-transform duration-500 hover:scale-105"
+              />
+            </div>
           </div>
 
           <!-- Highlight Bar -->

@@ -88,11 +88,11 @@ onUnmounted(() => {
           class="group flex items-center gap-2.5 btn-tactile"
           @click="mobileOpen = false"
         >
-          <span
-            class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta-600 text-sm font-extrabold text-white transition-transform duration-300 group-hover:scale-105"
-          >
-            PM
-          </span>
+          <img
+            src="/logo.webp"
+            alt="Logo Padel Makassar"
+            class="h-11 w-11 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
+          />
           <span class="text-base font-extrabold tracking-tight text-stone-900">PADEL MAKASSAR</span>
         </RouterLink>
 
@@ -148,12 +148,12 @@ onUnmounted(() => {
     <footer class="bg-stone-950 text-stone-400 print:hidden">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-8 sm:grid-cols-3">
         <div class="space-y-3">
-          <div class="flex items-center gap-2.5">
-            <span
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta-600 text-sm font-extrabold text-white"
-            >
-              PM
-            </span>
+          <div class="flex items-center gap-3">
+            <img
+              src="/logo.webp"
+              alt="Logo Padel Makassar"
+              class="h-12 w-12 shrink-0 object-contain"
+            />
             <span class="text-base font-extrabold text-white">PADEL MAKASSAR</span>
           </div>
           <p class="text-sm">Jl. Letjen Hertasning No.2, Panakkukang, Kota Makassar</p>

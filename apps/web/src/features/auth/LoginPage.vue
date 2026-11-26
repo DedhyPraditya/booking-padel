@@ -34,9 +34,18 @@ async function handleSubmit(): Promise<void> {
 </script>
 
 <template>
-  <section class="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-xs space-y-5">
-    <div>
-      <h1 class="text-xl font-bold text-stone-900">Login Admin</h1>
+  <section
+    v-reveal
+    class="mx-auto max-w-md rounded-3xl border border-stone-200 bg-white p-6 sm:p-8 shadow-xs space-y-5"
+  >
+    <div class="flex items-center gap-3.5">
+      <img src="/logo.webp" alt="Logo Padel Makassar" class="h-12 w-12 shrink-0 object-contain" />
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-terracotta-600">
+          PADEL MAKASSAR
+        </span>
+        <h1 class="text-xl font-extrabold text-stone-900">Login Admin</h1>
+      </div>
     </div>
 
     <div
