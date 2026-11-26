@@ -194,18 +194,6 @@ onMounted(loadVenue)
         class="relative overflow-hidden rounded-3xl bg-linear-to-br from-stone-950 via-stone-900 to-[#27140e] text-white shadow-xl"
       >
         <div class="relative p-8 sm:p-12 lg:p-16 space-y-8">
-          <div class="flex flex-wrap items-center gap-3">
-            <span
-              class="inline-flex items-center gap-2 rounded-full border border-terracotta-500/40 bg-terracotta-600/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-terracotta-300"
-            >
-              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Venue Padel Resmi • Makassar
-            </span>
-            <span class="rounded-full bg-white/10 px-3.5 py-1 text-xs font-semibold text-stone-300">
-              Standar Federasi Padel Internasional (FIP)
-            </span>
-          </div>
-
           <div class="max-w-3xl space-y-4">
             <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08]">
               PADEL MAKASSAR
@@ -259,10 +247,7 @@ onMounted(loadVenue)
       <section v-reveal="80" class="space-y-6">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
-              Spesifikasi Lapangan
-            </span>
-            <h2 class="mt-1 text-3xl font-black tracking-tight text-stone-900">
+            <h2 class="text-3xl font-black tracking-tight text-stone-900">
               Standar Federasi Padel Internasional (20m × 10m)
             </h2>
           </div>
@@ -465,10 +450,7 @@ onMounted(loadVenue)
       <!-- 3. TARIF SEWA TRANSPARAN (3-TIER CLEAN CARDS) -->
       <section class="space-y-6">
         <div v-reveal>
-          <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
-            Daftar Tarif
-          </span>
-          <h2 class="mt-1 text-3xl font-black tracking-tight text-stone-900">
+          <h2 class="text-3xl font-black tracking-tight text-stone-900">
             Tarif Sewa Lapangan Per Jam
           </h2>
         </div>
@@ -580,10 +562,7 @@ onMounted(loadVenue)
       <!-- 5. FASILITAS VENUE -->
       <section class="space-y-6">
         <div v-reveal>
-          <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
-            Fasilitas
-          </span>
-          <h2 class="mt-1 text-3xl font-black tracking-tight text-stone-900">
+          <h2 class="text-3xl font-black tracking-tight text-stone-900">
             Fasilitas Padel Makassar
           </h2>
         </div>
@@ -610,7 +589,6 @@ onMounted(loadVenue)
           v-reveal="40"
           class="card-interactive lg:col-span-7 rounded-3xl border border-stone-200 bg-white p-8 shadow-xs space-y-4"
         >
-          <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">Lokasi Venue</span>
           <h3 class="text-2xl font-black text-stone-900">Jl. Letjen Hertasning No.2, Makassar</h3>
           <p class="text-sm text-stone-600 leading-relaxed">
             Terletak strategis di pusat kota Makassar (Kec. Panakkukang), mudah dijangkau dengan area parkir kendaraan yang aman dan luas.
