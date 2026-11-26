@@ -315,21 +315,26 @@ onBeforeUnmount(() => {
         </div>
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+          class="btn-tactile inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100"
           :disabled="availabilityLoading"
           @click="loadAvailability"
         >
-          <AppIcon name="refresh" class="w-3.5 h-3.5" />
+          <AppIcon
+            name="refresh"
+            :class="availabilityLoading ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'"
+          />
           <span>{{ availabilityLoading ? 'Memuat...' : 'Segarkan' }}</span>
         </button>
       </div>
     </div>
 
-    <div
-      v-if="loading"
-      class="rounded-2xl border border-stone-200 bg-white p-12 text-center text-sm text-stone-500"
-    >
-      Memuat jadwal...
+    <div v-if="loading" class="space-y-5 animate-pulse">
+      <div v-for="n in 2" :key="n" class="rounded-2xl border border-stone-200 bg-white p-5 space-y-4">
+        <div class="h-6 w-48 rounded-lg bg-stone-200"></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div v-for="s in 12" :key="s" class="h-14 rounded-xl bg-stone-100"></div>
+        </div>
+      </div>
     </div>
 
     <div
@@ -340,15 +345,22 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else-if="venue">
-      <div
-        v-if="bookingError && !isModalOpen"
-        class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-      >
-        {{ bookingError }}
-      </div>
+      <Transition name="fade-slide">
+        <div
+          v-if="bookingError && !isModalOpen"
+          class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {{ bookingError }}
+        </div>
+      </Transition>
 
-      <div v-if="availabilityLoading" class="py-10 text-center text-sm text-stone-500">
-        Menghitung slot tersedia...
+      <div v-if="availabilityLoading" class="space-y-5 animate-pulse">
+        <div v-for="n in 2" :key="n" class="rounded-2xl border border-stone-200 bg-white p-5 space-y-4">
+          <div class="h-6 w-48 rounded-lg bg-stone-200"></div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <div v-for="s in 12" :key="s" class="h-14 rounded-xl bg-stone-100"></div>
+          </div>
+        </div>
       </div>
 
       <div
@@ -360,9 +372,10 @@ onBeforeUnmount(() => {
 
       <div v-else-if="availability" class="space-y-5">
         <div
-          v-for="court in availability.courts"
+          v-for="(court, cIdx) in availability.courts"
           :key="court.court_id"
-          class="rounded-2xl border border-stone-200 bg-white p-4 sm:p-5 space-y-3.5"
+          v-reveal="cIdx * 80"
+          class="rounded-2xl border border-stone-200 bg-white p-4 sm:p-5 space-y-3.5 shadow-2xs"
         >
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2.5">
@@ -376,7 +389,7 @@ onBeforeUnmount(() => {
             </div>
             <button
               type="button"
-              class="rounded-lg border border-terracotta-600 px-3 py-1 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+              class="btn-tactile rounded-lg border border-terracotta-600 px-3 py-1 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
               @click="selectAllAvailableForCourt(court)"
             >
               + Pilih Semua Jam Tersedia
@@ -389,11 +402,11 @@ onBeforeUnmount(() => {
               :key="slot.start_at"
               type="button"
               :disabled="!slot.available"
-              class="rounded-xl border p-2.5 text-left text-xs transition"
+              class="btn-tactile rounded-xl border p-2.5 text-left text-xs"
               :class="{
-                'border-terracotta-600 bg-terracotta-600 text-white font-semibold ring-2 ring-terracotta-600/30':
+                'border-terracotta-600 bg-terracotta-600 text-white font-semibold ring-2 ring-terracotta-600/30 shadow-xs':
                   isSlotSelected(court.court_id, slot.start_at),
-                'border-stone-200 bg-white hover:border-terracotta-600 text-stone-900':
+                'border-stone-200 bg-white hover:border-terracotta-600 hover:-translate-y-0.5 hover:shadow-2xs text-stone-900':
                   slot.available && !isSlotSelected(court.court_id, slot.start_at),
                 'border-amber-200 bg-amber-50 text-amber-800 cursor-not-allowed':
                   slot.status === 'held',
@@ -418,46 +431,50 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Floating bar -->
-      <div
-        v-if="selectedItems.length > 0"
-        class="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-4xl rounded-2xl border border-terracotta-600 bg-stone-900 px-5 py-3.5 text-white shadow-2xl flex flex-wrap items-center justify-between gap-4"
-      >
-        <div>
-          <p class="text-xs text-terracotta-300 font-semibold uppercase">
-            {{ selectedItems.length }} Slot ({{ totalSelectedHours }} Jam)
-          </p>
-          <p class="text-base font-bold">Estimasi: {{ formatIdr(estimatedTotal) }}</p>
+      <Transition name="float-bar">
+        <div
+          v-if="selectedItems.length > 0"
+          class="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-4xl rounded-2xl border border-terracotta-600 bg-stone-900 px-5 py-3.5 text-white shadow-2xl flex flex-wrap items-center justify-between gap-4"
+        >
+          <div>
+            <p class="text-xs text-terracotta-300 font-semibold uppercase">
+              {{ selectedItems.length }} Slot ({{ totalSelectedHours }} Jam)
+            </p>
+            <p class="text-base font-bold">Estimasi: {{ formatIdr(estimatedTotal) }}</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="btn-tactile rounded-xl border border-stone-600 px-3.5 py-2 text-xs font-medium text-stone-200 hover:bg-stone-800"
+              @click="clearSelectedSlots"
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              class="btn-tactile rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-500"
+              @click="openCheckoutModal"
+            >
+              Lanjut Booking →
+            </button>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="rounded-xl border border-stone-600 px-3.5 py-2 text-xs font-medium text-stone-200 hover:bg-stone-800"
-            @click="clearSelectedSlots"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            class="rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-500"
-            @click="openCheckoutModal"
-          >
-            Lanjut Booking →
-          </button>
-        </div>
-      </div>
+      </Transition>
 
       <!-- Modal checkout -->
       <Teleport to="body">
-        <div
-          v-if="isModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4 backdrop-blur-xs"
-          role="dialog"
-          aria-modal="true"
-          @click.self="closeBookingModal"
-        >
+        <Transition name="modal-fade">
           <div
-            class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-6 shadow-xl space-y-5"
+            v-if="isModalOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4 backdrop-blur-xs"
+            role="dialog"
+            aria-modal="true"
+            @click.self="closeBookingModal"
           >
+            <div
+              data-lenis-prevent
+              class="modal-panel w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-6 shadow-xl space-y-5"
+            >
             <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-terracotta-800">
@@ -594,7 +611,7 @@ onBeforeUnmount(() => {
                   <button
                     type="submit"
                     :disabled="holdSubmitting"
-                    class="rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-700 disabled:opacity-50"
+                    class="btn-tactile rounded-xl bg-terracotta-600 px-5 py-2 text-sm font-semibold text-white hover:bg-terracotta-700 disabled:opacity-50"
                   >
                     {{
                       holdSubmitting
@@ -605,8 +622,9 @@ onBeforeUnmount(() => {
                 </div>
               </form>
             </template>
+            </div>
           </div>
-        </div>
+        </Transition>
       </Teleport>
     </template>
   </section>

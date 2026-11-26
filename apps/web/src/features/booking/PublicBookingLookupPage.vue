@@ -37,47 +37,55 @@ async function handleLookup(): Promise<void> {
 </script>
 
 <template>
-  <section class="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-xs space-y-5">
+  <section
+    v-reveal
+    class="mx-auto max-w-md rounded-3xl border border-stone-200 bg-white p-6 sm:p-8 shadow-xs space-y-5"
+  >
     <div>
-      <h1 class="text-xl font-bold text-stone-900">Cek Pesanan</h1>
+      <span class="text-xs font-bold uppercase tracking-wider text-terracotta-600">
+        PADEL MAKASSAR
+      </span>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-stone-900">Cek Pesanan</h1>
     </div>
 
-    <div
-      v-if="errorMessage"
-      class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
-    >
-      {{ errorMessage }}
-    </div>
+    <Transition name="fade-slide">
+      <div
+        v-if="errorMessage"
+        class="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-800"
+      >
+        {{ errorMessage }}
+      </div>
+    </Transition>
 
     <form class="space-y-4" @submit.prevent="handleLookup">
       <div>
-        <label class="block text-sm font-medium text-stone-700">Kode Booking</label>
+        <label class="block text-xs font-semibold text-stone-700">Kode Booking</label>
         <input
           v-model="bookingCode"
           type="text"
           required
           placeholder="PM-261122-XXXXX"
-          class="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2 font-mono text-sm uppercase focus:border-terracotta-600 focus:outline-none"
+          class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2.5 font-mono text-sm uppercase transition-colors focus:border-terracotta-600 focus:outline-none"
         />
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-stone-700">Nomor WhatsApp / Telepon</label>
+        <label class="block text-xs font-semibold text-stone-700">Nomor WhatsApp / Telepon</label>
         <input
           v-model="customerPhone"
           type="text"
           required
           placeholder="08..."
-          class="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-terracotta-600 focus:outline-none"
+          class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm transition-colors focus:border-terracotta-600 focus:outline-none"
         />
       </div>
 
       <button
         type="submit"
         :disabled="loading"
-        class="w-full rounded-md bg-terracotta-700 px-4 py-2 text-sm font-semibold text-white hover:bg-terracotta-800 disabled:opacity-50"
+        class="btn-tactile w-full rounded-xl bg-terracotta-600 px-4 py-3 text-sm font-bold text-white hover:bg-terracotta-700 disabled:opacity-50 shadow-xs"
       >
-        {{ loading ? 'Mencari...' : 'Lihat Status & Unggah Bukti Bayar' }}
+        {{ loading ? 'Mencari Pesanan...' : 'Lihat Status & Unggah Bukti Bayar' }}
       </button>
     </form>
   </section>

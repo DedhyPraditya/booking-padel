@@ -26,6 +26,25 @@
   --color-success: #15803d;
   --color-warning: #b45309;
   --color-danger: #b91c1c;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Lenis Inertia Smooth Scroll Foundation */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 body {
@@ -38,6 +57,202 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
+  overflow-x: hidden;
+}
+
+/* Scroll Entrance Physics (v-reveal) */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.985);
+  transition:
+    opacity 0.65s var(--ease-spring),
+    transform 0.65s var(--ease-spring);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Route Page Transition */
+.page-fade-enter-active {
+  transition:
+    opacity 0.28s var(--ease-spring),
+    transform 0.28s var(--ease-spring);
+}
+
+.page-fade-leave-active {
+  transition:
+    opacity 0.16s ease-in,
+    transform 0.16s ease-in;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* Tab / Hotspot Cross-Fade + Micro Slide */
+.fade-slide-enter-active {
+  transition:
+    opacity 0.26s var(--ease-spring),
+    transform 0.26s var(--ease-spring);
+}
+
+.fade-slide-leave-active {
+  transition:
+    opacity 0.14s ease-in,
+    transform 0.14s ease-in;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Floating Bottom Checkout Bar Spring */
+.float-bar-enter-active {
+  transition:
+    opacity 0.35s var(--ease-spring),
+    transform 0.35s var(--ease-spring);
+}
+
+.float-bar-leave-active {
+  transition:
+    opacity 0.2s ease-in,
+    transform 0.2s ease-in;
+}
+
+.float-bar-enter-from,
+.float-bar-leave-to {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+}
+
+/* Modal Backdrop & Spring Dialog */
+.modal-fade-enter-active {
+  transition: opacity 0.24s ease-out;
+}
+
+.modal-fade-leave-active {
+  transition: opacity 0.18s ease-in;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .modal-panel {
+  transition:
+    transform 0.32s var(--ease-spring),
+    opacity 0.28s var(--ease-spring);
+}
+
+.modal-fade-leave-active .modal-panel {
+  transition:
+    transform 0.18s ease-in,
+    opacity 0.18s ease-in;
+}
+
+.modal-fade-enter-from .modal-panel,
+.modal-fade-leave-to .modal-panel {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+}
+
+/* Mobile Menu Accordion Slide */
+.mobile-menu-enter-active {
+  transition:
+    opacity 0.24s var(--ease-spring),
+    transform 0.24s var(--ease-spring);
+}
+
+.mobile-menu-leave-active {
+  transition:
+    opacity 0.16s ease-in,
+    transform 0.16s ease-in;
+}
+
+.mobile-menu-enter-from,
+.mobile-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Tactile Card & Button Utilities */
+.card-interactive {
+  transition:
+    transform 0.35s var(--ease-spring),
+    box-shadow 0.35s var(--ease-spring),
+    border-color 0.25s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px -10px rgba(28, 25, 23, 0.08);
+}
+
+.btn-tactile {
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-tactile:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Court SVG Line Draw Effect */
+@keyframes court-draw {
+  from {
+    stroke-dashoffset: 680;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.court-line-draw {
+  stroke-dasharray: 680;
+  animation: court-draw 1.1s var(--ease-spring) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .page-fade-enter-from,
+  .page-fade-leave-to,
+  .fade-slide-enter-from,
+  .fade-slide-leave-to,
+  .float-bar-enter-from,
+  .float-bar-leave-to {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .card-interactive:hover,
+  .btn-tactile:active {
+    transform: none !important;
+  }
+
+  .court-line-draw {
+    animation: none !important;
+    stroke-dasharray: none !important;
+  }
 }
 
 @media print {
@@ -53,5 +268,13 @@ body {
 
   body {
     background-color: #ffffff !important;
+  }
+
+  .reveal,
+  .page-fade-enter-from,
+  .page-fade-leave-to {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }

@@ -239,7 +239,11 @@ onMounted(loadPrimaryVenueId)
       </header>
 
       <main class="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="page-fade" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </Transition>
+        </RouterView>
       </main>
     </div>
   </div>

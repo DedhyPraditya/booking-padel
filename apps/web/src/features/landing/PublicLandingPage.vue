@@ -13,6 +13,28 @@ const errorMessage = ref<string | null>(null)
 const selectedCourtIndex = ref(0)
 const activeHotspot = ref<'glass' | 'turf' | 'lighting' | 'net'>('glass')
 
+const hotspotDetails: Record<
+  'glass' | 'turf' | 'lighting' | 'net',
+  { title: string; desc: string }
+> = {
+  glass: {
+    title: '1. Dinding Tempered Glass 12mm',
+    desc: 'Kaca panoramik kokoh anti gores dengan pantulan bola realistis standar turnamen dunia.',
+  },
+  turf: {
+    title: '2. Rumput Monofilament WPT',
+    desc: 'Traksi kaki optimal untuk pergerakan lateral cepat tanpa selip, menjaga kenyamanan engkel & lutut.',
+  },
+  net: {
+    title: '3. Net Tengah Standar FIP',
+    desc: 'Ketinggian net 88 cm di bagian tengah dan 92 cm di kedua sisi ujung tiang penyangga baja.',
+  },
+  lighting: {
+    title: '4. Floodlight LED 8 Titik',
+    desc: 'Pencahayaan 500+ Lux merata ke seluruh sudut lapangan, nyaman untuk pertandingan malam hari.',
+  },
+}
+
 const startingPrice = computed(() => {
   const rules = venue.value?.pricing_rules || []
   if (rules.length === 0) return null
@@ -149,12 +171,13 @@ onMounted(loadVenue)
 
 <template>
   <div class="space-y-16 pb-12">
-    <!-- LOADING / ERROR -->
-    <div
-      v-if="loading"
-      class="rounded-3xl border border-stone-200 bg-white p-16 text-center text-sm font-semibold text-stone-500 shadow-xs"
-    >
-      Memuat informasi venue PADEL MAKASSAR...
+    <!-- SMOOTH SKELETON LOADING -->
+    <div v-if="loading" class="space-y-8 animate-pulse">
+      <div class="h-96 rounded-3xl bg-stone-200/80"></div>
+      <div class="grid gap-6 lg:grid-cols-12">
+        <div class="lg:col-span-8 h-80 rounded-3xl bg-stone-200/70"></div>
+        <div class="lg:col-span-4 h-80 rounded-3xl bg-stone-200/70"></div>
+      </div>
     </div>
 
     <div
@@ -167,6 +190,7 @@ onMounted(loadVenue)
     <template v-else>
       <!-- 1. HERO SECTION (SPORTY & CLEAN) -->
       <section
+        v-reveal
         class="relative overflow-hidden rounded-3xl bg-linear-to-br from-stone-950 via-stone-900 to-[#27140e] text-white shadow-xl"
       >
         <div class="relative p-8 sm:p-12 lg:p-16 space-y-8">
@@ -194,14 +218,14 @@ onMounted(loadVenue)
           <div class="flex flex-wrap items-center gap-4 pt-2">
             <RouterLink
               :to="{ name: 'booking' }"
-              class="inline-flex items-center gap-2.5 rounded-xl bg-terracotta-600 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-terracotta-900/50 hover:bg-terracotta-500 transition-all hover:scale-102"
+              class="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-terracotta-600 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-terracotta-900/50 hover:bg-terracotta-500 hover:-translate-y-0.5"
             >
               <AppIcon name="calendar" class="w-4 h-4 text-white" />
               Booking Lapangan Sekarang
             </RouterLink>
             <RouterLink
               :to="{ name: 'booking-lookup' }"
-              class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10 transition-all"
+              class="btn-tactile inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10"
             >
               Cek Pesanan Saya
             </RouterLink>
@@ -232,7 +256,7 @@ onMounted(loadVenue)
       </section>
 
       <!-- 2. SPESIFIKASI LAPANGAN (INTERACTIVE BLUEPRINT SINGLE STAGE) -->
-      <section class="space-y-6">
+      <section v-reveal="80" class="space-y-6">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
             <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
@@ -247,11 +271,11 @@ onMounted(loadVenue)
               v-for="(c, idx) in venue.courts"
               :key="c.id"
               type="button"
-              class="rounded-lg px-4 py-2 text-xs font-extrabold transition-all"
+              class="btn-tactile rounded-lg px-4 py-2 text-xs font-extrabold"
               :class="
                 selectedCourtIndex === idx
                   ? 'bg-terracotta-600 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
               "
               @click="selectedCourtIndex = idx"
             >
@@ -263,24 +287,29 @@ onMounted(loadVenue)
         <div v-if="selectedCourt" class="grid gap-6 lg:grid-cols-12">
           <!-- Left: Blueprint with interactive clickable spots -->
           <div class="lg:col-span-8 rounded-3xl border border-stone-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
-            <div class="flex items-center justify-between border-b border-stone-100 pb-4">
-              <div>
-                <span class="rounded-full bg-terracotta-100 px-3 py-1 text-xs font-bold text-terracotta-700">
-                  Kode Lapangan: {{ selectedCourt.code }}
-                </span>
-                <h3 class="mt-2 text-2xl font-black text-stone-900">{{ selectedCourt.name }}</h3>
-              </div>
-              <span
-                class="rounded-full px-3 py-1 text-xs font-bold border"
-                :class="
-                  selectedCourt.status === 'active'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                "
+            <Transition name="fade-slide" mode="out-in">
+              <div
+                :key="selectedCourt.id"
+                class="flex items-center justify-between border-b border-stone-100 pb-4"
               >
-                {{ selectedCourt.status === 'active' ? 'Tersedia untuk Booking' : 'Dalam Perawatan' }}
-              </span>
-            </div>
+                <div>
+                  <span class="rounded-full bg-terracotta-100 px-3 py-1 text-xs font-bold text-terracotta-700">
+                    Kode Lapangan: {{ selectedCourt.code }}
+                  </span>
+                  <h3 class="mt-2 text-2xl font-black text-stone-900">{{ selectedCourt.name }}</h3>
+                </div>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-bold border"
+                  :class="
+                    selectedCourt.status === 'active'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  "
+                >
+                  {{ selectedCourt.status === 'active' ? 'Tersedia untuk Booking' : 'Dalam Perawatan' }}
+                </span>
+              </div>
+            </Transition>
 
             <!-- Single Blueprint Visual -->
             <div class="relative rounded-2xl bg-stone-950 p-6 text-white overflow-hidden">
@@ -291,7 +320,16 @@ onMounted(loadVenue)
 
               <div class="relative">
                 <svg viewBox="0 0 240 120" class="w-full rounded-xl bg-terracotta-700/80 p-2 shadow-inner">
-                  <rect x="10" y="10" width="220" height="100" fill="none" stroke="white" stroke-width="2" />
+                  <rect
+                    x="10"
+                    y="10"
+                    width="220"
+                    height="100"
+                    fill="none"
+                    stroke="white"
+                    stroke-width="2"
+                    class="court-line-draw"
+                  />
                   <line x1="120" y1="6" x2="120" y2="114" stroke="white" stroke-width="2.5" />
                   <line x1="45" y1="10" x2="45" y2="110" stroke="white" stroke-width="1.2" stroke-dasharray="2,2" />
                   <line x1="195" y1="10" x2="195" y2="110" stroke="white" stroke-width="1.2" stroke-dasharray="2,2" />
@@ -301,8 +339,12 @@ onMounted(loadVenue)
                 <!-- Hotspot 1: Glass -->
                 <button
                   type="button"
-                  class="absolute top-2 left-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white transition-all hover:scale-110"
-                  :class="activeHotspot === 'glass' ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40' : 'bg-terracotta-600 text-white'"
+                  class="btn-tactile absolute top-2 left-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold hover:scale-110"
+                  :class="
+                    activeHotspot === 'glass'
+                      ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40 scale-110'
+                      : 'bg-terracotta-600 text-white'
+                  "
                   title="Dinding Kaca"
                   @click="activeHotspot = 'glass'"
                 >
@@ -312,8 +354,12 @@ onMounted(loadVenue)
                 <!-- Hotspot 2: Turf -->
                 <button
                   type="button"
-                  class="absolute top-1/2 left-1/4 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white transition-all hover:scale-110"
-                  :class="activeHotspot === 'turf' ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40' : 'bg-terracotta-600 text-white'"
+                  class="btn-tactile absolute top-1/2 left-1/4 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold hover:scale-110"
+                  :class="
+                    activeHotspot === 'turf'
+                      ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40 scale-110'
+                      : 'bg-terracotta-600 text-white'
+                  "
                   title="Rumput Sintetis"
                   @click="activeHotspot = 'turf'"
                 >
@@ -323,8 +369,12 @@ onMounted(loadVenue)
                 <!-- Hotspot 3: Net -->
                 <button
                   type="button"
-                  class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white transition-all hover:scale-110"
-                  :class="activeHotspot === 'net' ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40' : 'bg-terracotta-600 text-white'"
+                  class="btn-tactile absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold hover:scale-110"
+                  :class="
+                    activeHotspot === 'net'
+                      ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40 scale-110'
+                      : 'bg-terracotta-600 text-white'
+                  "
                   title="Jaring Net"
                   @click="activeHotspot = 'net'"
                 >
@@ -334,8 +384,12 @@ onMounted(loadVenue)
                 <!-- Hotspot 4: Lighting -->
                 <button
                   type="button"
-                  class="absolute top-2 right-4 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white transition-all hover:scale-110"
-                  :class="activeHotspot === 'lighting' ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40' : 'bg-terracotta-600 text-white'"
+                  class="btn-tactile absolute top-2 right-4 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold hover:scale-110"
+                  :class="
+                    activeHotspot === 'lighting'
+                      ? 'bg-amber-400 text-stone-950 ring-4 ring-amber-300/40 scale-110'
+                      : 'bg-terracotta-600 text-white'
+                  "
                   title="Penerangan LED"
                   @click="activeHotspot = 'lighting'"
                 >
@@ -343,24 +397,18 @@ onMounted(loadVenue)
                 </button>
               </div>
 
-              <!-- Hotspot Info Box -->
-              <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-                <div v-if="activeHotspot === 'glass'" class="space-y-1">
-                  <p class="text-xs font-bold text-amber-400 uppercase">1. Dinding Tempered Glass 12mm</p>
-                  <p class="text-sm font-semibold text-white">Kaca panoramik kokoh anti gores dengan pantulan bola realistis standar turnamen dunia.</p>
-                </div>
-                <div v-else-if="activeHotspot === 'turf'" class="space-y-1">
-                  <p class="text-xs font-bold text-amber-400 uppercase">2. Rumput Monofilament WPT</p>
-                  <p class="text-sm font-semibold text-white">Traksi kaki optimal untuk pergerakan lateral cepat tanpa selip, menjaga kenyamanan engkel & lutut.</p>
-                </div>
-                <div v-else-if="activeHotspot === 'net'" class="space-y-1">
-                  <p class="text-xs font-bold text-amber-400 uppercase">3. Net Tengah Standar FIP</p>
-                  <p class="text-sm font-semibold text-white">Ketinggian net 88 cm di bagian tengah dan 92 cm di kedua sisi ujung tiang penyangga baja.</p>
-                </div>
-                <div v-else class="space-y-1">
-                  <p class="text-xs font-bold text-amber-400 uppercase">4. Floodlight LED 8 Titik</p>
-                  <p class="text-sm font-semibold text-white">Pencahayaan 500+ Lux merata ke seluruh sudut lapangan, nyaman untuk pertandingan malam hari.</p>
-                </div>
+              <!-- Animated Hotspot Info Box -->
+              <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 min-h-[76px]">
+                <Transition name="fade-slide" mode="out-in">
+                  <div :key="activeHotspot" class="space-y-1">
+                    <p class="text-xs font-bold text-amber-400 uppercase">
+                      {{ hotspotDetails[activeHotspot].title }}
+                    </p>
+                    <p class="text-sm font-semibold text-white">
+                      {{ hotspotDetails[activeHotspot].desc }}
+                    </p>
+                  </div>
+                </Transition>
               </div>
             </div>
 
@@ -370,16 +418,17 @@ onMounted(loadVenue)
               </span>
               <RouterLink
                 :to="{ name: 'booking' }"
-                class="inline-flex items-center gap-1.5 text-sm font-extrabold text-terracotta-600 hover:text-terracotta-700"
+                class="group inline-flex items-center gap-1.5 text-sm font-extrabold text-terracotta-600 hover:text-terracotta-700"
               >
-                Pilih Jadwal di {{ selectedCourt.name }} →
+                <span>Pilih Jadwal di {{ selectedCourt.name }}</span>
+                <span class="transition-transform duration-200 group-hover:translate-x-1">→</span>
               </RouterLink>
             </div>
           </div>
 
           <!-- Right: Key Advantages & Promo -->
           <div class="lg:col-span-4 flex flex-col justify-between gap-4">
-            <div class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+            <div class="card-interactive rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
               <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-900">
                 Keunggulan Lapangan Padel Makassar
               </h4>
@@ -399,7 +448,7 @@ onMounted(loadVenue)
               </ul>
             </div>
 
-            <div class="rounded-3xl bg-terracotta-50 border border-terracotta-200 p-6 space-y-3">
+            <div class="card-interactive rounded-3xl bg-terracotta-50 border border-terracotta-200 p-6 space-y-3">
               <span class="text-xs font-bold uppercase tracking-wider text-terracotta-700">Promo Pembukaan</span>
               <div class="flex items-center justify-between">
                 <span class="font-mono text-xl font-black text-terracotta-800">OPENING10</span>
@@ -415,7 +464,7 @@ onMounted(loadVenue)
 
       <!-- 3. TARIF SEWA TRANSPARAN (3-TIER CLEAN CARDS) -->
       <section class="space-y-6">
-        <div>
+        <div v-reveal>
           <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
             Daftar Tarif
           </span>
@@ -426,7 +475,10 @@ onMounted(loadVenue)
 
         <div class="grid gap-6 sm:grid-cols-3">
           <!-- Tier 1: Weekday Regular -->
-          <div class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4 flex flex-col justify-between">
+          <div
+            v-reveal="40"
+            class="card-interactive rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4 flex flex-col justify-between"
+          >
             <div class="space-y-2">
               <span class="text-xs font-bold uppercase tracking-wider text-stone-500">Senin – Jumat</span>
               <h3 class="text-lg font-black text-stone-900">Weekday Reguler</h3>
@@ -438,14 +490,17 @@ onMounted(loadVenue)
             </div>
             <RouterLink
               :to="{ name: 'booking' }"
-              class="w-full text-center rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-stone-800 hover:bg-stone-100 transition-colors"
+              class="btn-tactile w-full text-center rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-stone-800 hover:bg-stone-100 hover:border-stone-300"
             >
               Pilih Jam Weekday
             </RouterLink>
           </div>
 
           <!-- Tier 2: Weekend Regular -->
-          <div class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4 flex flex-col justify-between">
+          <div
+            v-reveal="120"
+            class="card-interactive rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-4 flex flex-col justify-between"
+          >
             <div class="space-y-2">
               <span class="text-xs font-bold uppercase tracking-wider text-stone-500">Sabtu & Minggu</span>
               <h3 class="text-lg font-black text-stone-900">Weekend Reguler</h3>
@@ -457,14 +512,17 @@ onMounted(loadVenue)
             </div>
             <RouterLink
               :to="{ name: 'booking' }"
-              class="w-full text-center rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-stone-800 hover:bg-stone-100 transition-colors"
+              class="btn-tactile w-full text-center rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-stone-800 hover:bg-stone-100 hover:border-stone-300"
             >
               Pilih Jam Weekend
             </RouterLink>
           </div>
 
           <!-- Tier 3: Peak Hours (Highlighted) -->
-          <div class="rounded-3xl border-2 border-terracotta-600 bg-terracotta-50/40 p-6 shadow-md space-y-4 flex flex-col justify-between">
+          <div
+            v-reveal="200"
+            class="card-interactive rounded-3xl border-2 border-terracotta-600 bg-terracotta-50/40 p-6 shadow-md space-y-4 flex flex-col justify-between"
+          >
             <div class="space-y-2">
               <span class="inline-block rounded-md bg-terracotta-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
                 Paling Favorit
@@ -478,7 +536,7 @@ onMounted(loadVenue)
             </div>
             <RouterLink
               :to="{ name: 'booking' }"
-              class="w-full text-center rounded-xl bg-terracotta-600 py-2.5 text-xs font-black text-white hover:bg-terracotta-700 transition-colors shadow-sm"
+              class="btn-tactile w-full text-center rounded-xl bg-terracotta-600 py-2.5 text-xs font-black text-white hover:bg-terracotta-700 shadow-sm"
             >
               Booking Peak Hours
             </RouterLink>
@@ -487,7 +545,10 @@ onMounted(loadVenue)
       </section>
 
       <!-- 4. ALUR BOOKING PRAKTIS -->
-      <section class="rounded-3xl border border-stone-200 bg-white p-8 sm:p-12 shadow-xs space-y-8">
+      <section
+        v-reveal
+        class="rounded-3xl border border-stone-200 bg-white p-8 sm:p-12 shadow-xs space-y-8"
+      >
         <div class="text-center max-w-xl mx-auto space-y-1">
           <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
             Alur Pemesanan
@@ -501,7 +562,8 @@ onMounted(loadVenue)
           <div
             v-for="(st, idx) in steps"
             :key="st.step"
-            class="rounded-2xl border border-stone-100 bg-[#FAF8F6] p-6 space-y-3"
+            v-reveal="idx * 70"
+            class="card-interactive rounded-2xl border border-stone-100 bg-[#FAF8F6] p-6 space-y-3 hover:border-terracotta-200"
           >
             <div class="flex items-center justify-between">
               <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-terracotta-600 text-sm font-black text-white">
@@ -517,7 +579,7 @@ onMounted(loadVenue)
 
       <!-- 5. FASILITAS VENUE -->
       <section class="space-y-6">
-        <div>
+        <div v-reveal>
           <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
             Fasilitas
           </span>
@@ -528,9 +590,10 @@ onMounted(loadVenue)
 
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <div
-            v-for="item in amenities"
+            v-for="(item, idx) in amenities"
             :key="item.title"
-            class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-2 hover:border-terracotta-300 transition-colors"
+            v-reveal="(idx % 3) * 70"
+            class="card-interactive rounded-3xl border border-stone-200 bg-white p-6 shadow-xs space-y-2 hover:border-terracotta-300"
           >
             <span class="inline-block rounded-md bg-terracotta-100 px-2.5 py-0.5 text-xs font-bold text-terracotta-700">
               {{ item.tag }}
@@ -543,7 +606,10 @@ onMounted(loadVenue)
 
       <!-- 6. LOKASI & KONTAK -->
       <section class="grid gap-6 lg:grid-cols-12">
-        <div class="lg:col-span-7 rounded-3xl border border-stone-200 bg-white p-8 shadow-xs space-y-4">
+        <div
+          v-reveal="40"
+          class="card-interactive lg:col-span-7 rounded-3xl border border-stone-200 bg-white p-8 shadow-xs space-y-4"
+        >
           <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">Lokasi Venue</span>
           <h3 class="text-2xl font-black text-stone-900">Jl. Letjen Hertasning No.2, Makassar</h3>
           <p class="text-sm text-stone-600 leading-relaxed">
@@ -554,7 +620,7 @@ onMounted(loadVenue)
               :href="mapsUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-3 text-xs font-bold text-white hover:bg-stone-800 transition-all"
+              class="btn-tactile inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-3 text-xs font-bold text-white hover:bg-stone-800"
             >
               <AppIcon name="external" class="w-4 h-4 text-white" />
               Petunjuk Arah Google Maps
@@ -562,7 +628,10 @@ onMounted(loadVenue)
           </div>
         </div>
 
-        <div class="lg:col-span-5 rounded-3xl bg-terracotta-600 text-white p-8 shadow-xs space-y-4 flex flex-col justify-between">
+        <div
+          v-reveal="120"
+          class="card-interactive lg:col-span-5 rounded-3xl bg-terracotta-600 text-white p-8 shadow-xs space-y-4 flex flex-col justify-between"
+        >
           <div class="space-y-2">
             <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-200">Bantuan & Reservasi</span>
             <h3 class="text-2xl font-black">Kontak Operasional</h3>
@@ -575,7 +644,7 @@ onMounted(loadVenue)
               :href="whatsappUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-extrabold text-terracotta-700 shadow-md hover:bg-stone-100 transition-all"
+              class="btn-tactile inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-extrabold text-terracotta-700 shadow-md hover:bg-stone-100"
             >
               Chat WhatsApp (0823-4783-8252)
             </a>
