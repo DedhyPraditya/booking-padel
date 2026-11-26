@@ -39,7 +39,15 @@ class PublicPaymentController extends Controller
     {
         $validated = $request->validate([
             'public_token' => ['required', 'string'],
-            'proof_file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'proof_file' => [
+                'required',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'dimensions:min_width=80,min_height=80,max_width=6000,max_height=6000',
+                'max:5120',
+            ],
             'sender_bank_name' => ['nullable', 'string', 'max:80'],
             'sender_account_holder' => ['nullable', 'string', 'max:150'],
         ]);

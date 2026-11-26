@@ -56,9 +56,15 @@ class AdminPaymentController extends Controller
         ]);
     }
 
-    public function downloadProof(string $id): StreamedResponse|JsonResponse
+    public function downloadProof(Request $request, string $id): StreamedResponse|JsonResponse
     {
-        $payment = Payment::findOrFail($id);
+        /** @var User $user */
+        $user = $request->user();
+        $payment = Payment::with('booking')->findOrFail($id);
+
+        if ($payment->booking && ! $user->canAccessVenue($payment->booking->venue_id)) {
+            return response()->json(['message' => 'You are not authorized to access this venue.'], 403);
+        }
 
         if (empty($payment->proof_file_key) || ! Storage::disk('local')->exists($payment->proof_file_key)) {
             return response()->json([
@@ -66,11 +72,26 @@ class AdminPaymentController extends Controller
             ], 404);
         }
 
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        $safeMime = in_array($payment->proof_mime_type, $allowedMimes, true)
+            ? $payment->proof_mime_type
+            : 'application/octet-stream';
+
+        $safeFilename = preg_replace(
+            '/[^A-Za-z0-9._-]/',
+            '_',
+            (string) ($payment->proof_original_name ?: basename($payment->proof_file_key))
+        ) ?: 'bukti_transfer.jpg';
+
         return Storage::disk('local')->response(
             $payment->proof_file_key,
-            $payment->proof_original_name ?: basename($payment->proof_file_key),
+            $safeFilename,
             [
-                'Content-Type' => $payment->proof_mime_type ?: 'application/octet-stream',
+                'Content-Type' => $safeMime,
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
+                'X-Frame-Options' => 'DENY',
+                'Cache-Control' => 'private, no-store, max-age=0',
             ]
         );
     }

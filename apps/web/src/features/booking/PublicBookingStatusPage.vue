@@ -90,7 +90,31 @@ function printVoucher(): void {
 
 function onFileChange(event: Event): void {
   const input = event.target as HTMLInputElement
-  selectedFile.value = input.files?.[0] ?? null
+  const file = input.files?.[0] ?? null
+  errorMessage.value = null
+
+  if (!file) {
+    selectedFile.value = null
+    return
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    errorMessage.value =
+      'Format file ditolak. Hanya gambar JPG, PNG, atau WEBP yang diizinkan (PDF/dokumen tidak diterima demi keamanan).'
+    input.value = ''
+    selectedFile.value = null
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    errorMessage.value = 'Ukuran gambar terlalu besar. Maksimal 5 MB.'
+    input.value = ''
+    selectedFile.value = null
+    return
+  }
+
+  selectedFile.value = file
 }
 
 async function fetchStatus(): Promise<void> {
@@ -472,11 +496,11 @@ onMounted(fetchStatus)
 
           <div>
             <label class="block text-xs font-medium text-stone-700">
-              File Bukti Transfer (JPG, PNG, WEBP, atau PDF — Maks 5MB) *
+              Screenshot / Foto Bukti Transfer (JPG, PNG, atau WEBP — Maks 5MB) *
             </label>
             <input
               type="file"
-              accept=".jpg,.jpeg,.png,.webp,.pdf"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
               required
               class="mt-1 block w-full text-sm text-stone-700 file:mr-4 file:rounded-lg file:border-0 file:bg-terracotta-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-terracotta-800 hover:file:bg-terracotta-100"
               @change="onFileChange"

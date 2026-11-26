@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -101,23 +102,29 @@ class PaymentService
             ]);
         }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        $sanitized = $this->sanitizeAndReencodeProofImage($file);
+
         $storageKey = sprintf(
-            'payment-proofs/%s/%s-%s.%s',
+            'payment-proofs/%s/%s.%s',
             now()->format('Y/m'),
-            $booking->booking_code,
-            Str::random(12),
-            $extension
+            (string) Str::uuid(),
+            $sanitized['extension']
         );
 
-        $file->storeAs(dirname($storageKey), basename($storageKey), 'local');
+        Storage::disk('local')->put($storageKey, $sanitized['binary']);
 
-        return DB::transaction(function () use ($payment, $storageKey, $file, $senderBankName, $senderAccountHolder) {
+        $previousFileKey = $payment->proof_file_key;
+        $safeDisplayName = $this->buildSafeDisplayFilename(
+            $file->getClientOriginalName(),
+            $sanitized['extension']
+        );
+
+        $updatedPayment = DB::transaction(function () use ($payment, $storageKey, $sanitized, $safeDisplayName, $senderBankName, $senderAccountHolder) {
             $payment->update([
                 'status' => 'pending',
                 'proof_file_key' => $storageKey,
-                'proof_original_name' => substr($file->getClientOriginalName(), 0, 190),
-                'proof_mime_type' => $file->getClientMimeType(),
+                'proof_original_name' => $safeDisplayName,
+                'proof_mime_type' => $sanitized['mime_type'],
                 'proof_uploaded_at' => now(),
                 'sender_bank_name' => $senderBankName,
                 'sender_account_holder' => $senderAccountHolder,
@@ -125,6 +132,143 @@ class PaymentService
 
             return $payment->fresh();
         });
+
+        if (! empty($previousFileKey) && $previousFileKey !== $storageKey) {
+            Storage::disk('local')->delete($previousFileKey);
+        }
+
+        return $updatedPayment;
+    }
+
+    /**
+     * Decode pixel stream via GD and re-encode into a brand-new image buffer.
+     * Strips all EXIF metadata, polyglot payloads, and embedded scripts.
+     *
+     * @return array{binary: string, extension: string, mime_type: string}
+     */
+    private function sanitizeAndReencodeProofImage(UploadedFile $file): array
+    {
+        $realPath = $file->getRealPath();
+        if (! $realPath || ! is_file($realPath)) {
+            throw ValidationException::withMessages([
+                'proof_file' => ['File bukti transfer tidak dapat dibaca oleh server.'],
+            ]);
+        }
+
+        $imageInfo = @getimagesize($realPath);
+        if ($imageInfo === false) {
+            throw ValidationException::withMessages([
+                'proof_file' => ['File harus berupa gambar asli (JPG, PNG, atau WEBP).'],
+            ]);
+        }
+
+        [$width, $height, $imageType] = $imageInfo;
+
+        if ($width < 80 || $height < 80 || $width > 6000 || $height > 6000 || ($width * $height) > 25_000_000) {
+            throw ValidationException::withMessages([
+                'proof_file' => ['Resolusi gambar tidak valid (minimal 80x80 px, maksimal 6000x6000 px).'],
+            ]);
+        }
+
+        $source = match ($imageType) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($realPath),
+            IMAGETYPE_PNG => @imagecreatefrompng($realPath),
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($realPath) : false,
+            default => false,
+        };
+
+        if ($source === false) {
+            throw ValidationException::withMessages([
+                'proof_file' => ['File gambar bukti transfer rusak atau mengandung format tidak didukung.'],
+            ]);
+        }
+
+        // Preserve upright orientation on mobile camera JPEGs before stripping EXIF
+        if ($imageType === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $exif = @exif_read_data($realPath);
+            $orientation = (int) ($exif['Orientation'] ?? 1);
+            $rotated = match ($orientation) {
+                3 => @imagerotate($source, 180, 0),
+                6 => @imagerotate($source, -90, 0),
+                8 => @imagerotate($source, 90, 0),
+                default => false,
+            };
+            if ($rotated !== false) {
+                imagedestroy($source);
+                $source = $rotated;
+                $width = imagesx($source);
+                $height = imagesy($source);
+            }
+        }
+
+        $maxDimension = 1800;
+        $targetWidth = $width;
+        $targetHeight = $height;
+
+        if ($width > $maxDimension || $height > $maxDimension) {
+            $ratio = min($maxDimension / $width, $maxDimension / $height);
+            $targetWidth = max(1, (int) round($width * $ratio));
+            $targetHeight = max(1, (int) round($height * $ratio));
+        }
+
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+        if ($canvas === false) {
+            imagedestroy($source);
+            throw ValidationException::withMessages([
+                'proof_file' => ['Gagal memproses gambar bukti transfer.'],
+            ]);
+        }
+
+        if ($imageType === IMAGETYPE_PNG || $imageType === IMAGETYPE_WEBP) {
+            imagealphablending($canvas, false);
+            imagesavealpha($canvas, true);
+            $transparent = imagecolorallocatealpha($canvas, 255, 255, 255, 127);
+            imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $transparent);
+        } else {
+            $white = imagecolorallocate($canvas, 255, 255, 255);
+            imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $white);
+        }
+
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+        imagedestroy($source);
+
+        ob_start();
+        if ($imageType === IMAGETYPE_PNG) {
+            $ok = imagepng($canvas, null, 7);
+            $ext = 'png';
+            $mime = 'image/png';
+        } elseif ($imageType === IMAGETYPE_WEBP && function_exists('imagewebp')) {
+            $ok = imagewebp($canvas, null, 85);
+            $ext = 'webp';
+            $mime = 'image/webp';
+        } else {
+            $ok = imagejpeg($canvas, null, 85);
+            $ext = 'jpg';
+            $mime = 'image/jpeg';
+        }
+        $binary = (string) ob_get_clean();
+        imagedestroy($canvas);
+
+        if (! $ok || $binary === '') {
+            throw ValidationException::withMessages([
+                'proof_file' => ['Gagal menyimpan ulang gambar bukti transfer yang aman.'],
+            ]);
+        }
+
+        return [
+            'binary' => $binary,
+            'extension' => $ext,
+            'mime_type' => $mime,
+        ];
+    }
+
+    private function buildSafeDisplayFilename(string $originalName, string $safeExtension): string
+    {
+        $base = pathinfo($originalName, PATHINFO_FILENAME);
+        $cleanBase = preg_replace('/[^A-Za-z0-9_-]/', '_', $base) ?: 'bukti_transfer';
+        $cleanBase = trim(substr($cleanBase, 0, 80), '_-') ?: 'bukti_transfer';
+
+        return "{$cleanBase}.{$safeExtension}";
     }
 
     /**

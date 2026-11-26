@@ -135,8 +135,8 @@ class Phase4ManualPaymentAndVerificationTest extends TestCase
         $bookingId = $holdResp->json('data.booking.id');
         $publicToken = $holdResp->json('data.public_token');
 
-        // Upload transfer proof
-        $proofFile = UploadedFile::fake()->create('bukti-mandiri.jpg', 300, 'image/jpeg');
+        // Upload genuine image transfer proof
+        $proofFile = UploadedFile::fake()->image('bukti-mandiri.jpg', 600, 800);
 
         $uploadResp = $this->postJson('/api/v1/payment-proofs', [
             'public_token' => $publicToken,
@@ -219,7 +219,7 @@ class Phase4ManualPaymentAndVerificationTest extends TestCase
             ->assertJsonPath('data.status', 'failed');
 
         // Customer re-uploads valid proof and admin approves
-        $proofFile = UploadedFile::fake()->create('bukti-revisi.png', 200, 'image/png');
+        $proofFile = UploadedFile::fake()->image('bukti-revisi.png', 600, 800);
         $this->postJson('/api/v1/payment-proofs', [
             'public_token' => $publicToken,
             'proof_file' => $proofFile,
@@ -244,5 +244,80 @@ class Phase4ManualPaymentAndVerificationTest extends TestCase
             ->assertJsonPath('data.amount', '250000.00');
 
         $this->assertSame('refunded', Payment::findOrFail($paymentId)->status);
+    }
+
+    public function test_malicious_and_polyglot_file_uploads_are_rejected_and_valid_images_are_reencoded(): void
+    {
+        $holdResp = $this->postJson('/api/v1/booking-holds', [
+            'venue_id' => $this->venue->id,
+            'court_id' => $this->court1->id,
+            'start_at' => '2026-11-26T16:00:00+08:00',
+            'end_at' => '2026-11-26T17:00:00+08:00',
+            'customer_name' => 'Security Tester',
+            'customer_phone' => '081277770000',
+        ]);
+
+        $holdResp->assertCreated();
+        $publicToken = $holdResp->json('data.public_token');
+
+        // 1. Disguised PHP webshell (.php.jpg) must be rejected
+        $phpShell = UploadedFile::fake()->createWithContent(
+            'shell.php.jpg',
+            "<?php system(\$_GET['cmd']); ?>"
+        );
+        $this->postJson('/api/v1/payment-proofs', [
+            'public_token' => $publicToken,
+            'proof_file' => $phpShell,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['proof_file']);
+
+        // 2. PDF document must be rejected (strictly raster images allowed)
+        $pdfPayload = UploadedFile::fake()->createWithContent(
+            'invoice.pdf',
+            "%PDF-1.4\n1 0 obj << /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>"
+        );
+        $this->postJson('/api/v1/payment-proofs', [
+            'public_token' => $publicToken,
+            'proof_file' => $pdfPayload,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['proof_file']);
+
+        // 3. SVG XSS payload must be rejected
+        $svgXss = UploadedFile::fake()->createWithContent(
+            'xss.svg',
+            '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+        );
+        $this->postJson('/api/v1/payment-proofs', [
+            'public_token' => $publicToken,
+            'proof_file' => $svgXss,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['proof_file']);
+
+        // 4. Genuine JPEG with trailing polyglot PHP code gets sanitized via GD re-encoding
+        $cleanJpeg = UploadedFile::fake()->image('struk.php.jpg', 500, 700);
+        $polyglotBinary = file_get_contents($cleanJpeg->getRealPath())."\n<?php /* EVIL_POLYGLOT_MARKER */ ?>";
+        $polyglotFile = UploadedFile::fake()->createWithContent('struk../shell.php.jpg', $polyglotBinary);
+
+        $uploadResp = $this->postJson('/api/v1/payment-proofs', [
+            'public_token' => $publicToken,
+            'proof_file' => $polyglotFile,
+        ]);
+
+        $uploadResp->assertOk()
+            ->assertJsonPath('data.proof_mime_type', 'image/jpeg');
+
+        $payment = Payment::findOrFail($uploadResp->json('data.id'));
+        $this->assertStringEndsWith('.jpg', (string) $payment->proof_file_key);
+        $this->assertStringEndsWith('.jpg', (string) $payment->proof_original_name);
+
+        $storedBytes = Storage::disk('local')->get($payment->proof_file_key);
+        $this->assertNotNull($storedBytes);
+        $this->assertStringNotContainsString('EVIL_POLYGLOT_MARKER', $storedBytes);
+
+        // 5. Proof response enforces anti-sniffing and sandbox CSP headers
+        $proofResp = $this->actingAs($this->venueAdmin, 'sanctum')
+            ->get("/api/v1/admin/payments/{$payment->id}/proof");
+
+        $proofResp->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY');
+        $this->assertStringContainsString("default-src 'none'", (string) $proofResp->headers->get('Content-Security-Policy'));
     }
 }
