@@ -529,32 +529,30 @@ onMounted(loadVenue)
       <!-- 4. ALUR BOOKING PRAKTIS -->
       <section
         v-reveal
-        class="rounded-3xl border border-stone-200 bg-white p-8 sm:p-12 shadow-xs space-y-8"
+        class="rounded-3xl border border-stone-200 bg-white p-8 sm:p-10 shadow-xs space-y-8"
       >
-        <div class="text-center max-w-xl mx-auto space-y-1">
-          <span class="text-xs font-extrabold uppercase tracking-widest text-terracotta-600">
-            Alur Pemesanan
-          </span>
+        <div>
           <h2 class="text-3xl font-black tracking-tight text-stone-900">
             4 Langkah Mudah Booking
           </h2>
         </div>
 
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div
             v-for="(st, idx) in steps"
             :key="st.step"
             v-reveal="idx * 70"
-            class="card-interactive rounded-2xl border border-stone-100 bg-[#FAF8F6] p-6 space-y-3 hover:border-terracotta-200"
+            class="card-interactive flex flex-col rounded-2xl border border-stone-200/80 bg-[#FAF8F6] p-6 hover:border-terracotta-300"
           >
-            <div class="flex items-center justify-between">
-              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-terracotta-600 text-sm font-black text-white">
-                {{ st.step }}
-              </span>
-              <span class="text-xs font-bold text-stone-400">Step {{ idx + 1 }}/4</span>
-            </div>
-            <h3 class="text-base font-extrabold text-stone-900">{{ st.title }}</h3>
-            <p class="text-xs leading-relaxed text-stone-600">{{ st.desc }}</p>
+            <span
+              class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-terracotta-600 text-sm font-black text-white shadow-2xs"
+            >
+              {{ st.step }}
+            </span>
+            <h3 class="mt-4 text-base font-extrabold text-stone-900 leading-snug">
+              {{ st.title }}
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-stone-600">{{ st.desc }}</p>
           </div>
         </div>
       </section>
