@@ -36,7 +36,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, json, bcmath, pdo_pgsql, pgsql
+          extensions: mbstring, xml, ctype, json, bcmath, gd, exif, fileinfo, pdo_pgsql, pgsql
           coverage: none
 
       - name: Install Composer dependencies
